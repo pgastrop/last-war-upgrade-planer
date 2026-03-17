@@ -886,20 +886,27 @@ async function saveState(){
   renderSaveList();updateProfileDropdown();
 }
 function loadState(idx){
-  const s=getStates()[idx];if(!s)return;
-  currentStyle=s.style;document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===s.style));localStorage.setItem(getUserKey('Style'),s.style);
-  RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);if(el&&s.res)el.value=s.res[k]||0;});
-  if(s.cur){setCurLevels(s.cur);BUILDINGS.forEach(b=>{const el=document.getElementById('ist_'+b.id);if(el)el.value=s.cur[b.id]||0;});}
+  const s=getStates()[idx]; if(!s)return;
+  const sty=s.style||'hq';
+  currentStyle=sty;
+  document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
+  localStorage.setItem('lwStyle_'+(_currentUserId||'guest'), sty);
+  // Supabase: resources/cur_levels | lokal: res/cur
+  const res=s.resources||s.res||{};
+  const cur=s.cur_levels||s.cur||{};
+  RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k); if(el) el.value=res[k]||0;});
+  setCurLevels(cur);
+  BUILDINGS.forEach(b=>{const el=document.getElementById('ist_'+b.id); if(el) el.value=cur[b.id]||0;});
   closeModal();
 }
-async function deleteState(idx){
-  const s=getStates();const entry=s[idx];
+async async function deleteState(idx){
+  const states=getStates(); const entry=states[idx];
   if(!entry)return;
   if(_currentUserId && entry.id){
     try{ await dbDeleteState(entry.id); }catch(e){}
-    _statesCache=await dbLoadStates(_currentUserId);
-  } else { s.splice(idx,1);setStates(s); }
-  renderSaveList();updateProfileDropdown();
+    try{ _statesCache=await dbLoadStates(_currentUserId); }catch(e){}
+  } else { states.splice(idx,1); setStates(states); }
+  renderSaveList(); updateProfileDropdown();
 }
 function renderSaveList(){updateProfileDropdown();
   const states=getStates();const el=document.getElementById('saveList');
@@ -920,20 +927,27 @@ function exportCSV(){
 }
 
 // ════ QUICKSAVE & PROFIL-SYSTEM ════
-function quickSave(){
+async function quickSave(){
   const name=prompt('Profilname eingeben:','Stand '+new Date().toLocaleString('de-DE'));
   if(!name)return;
-  const res=getRes();const cur=getCurLevels();
-  const states=getStates();
-  // Überschreiben wenn Name gleich
-  const existIdx=states.findIndex(s=>s.name===name);
-  const entry={name,date:new Date().toISOString(),style:currentStyle,res,cur};
-  if(existIdx>=0){if(!confirm(`Profil "${name}" überschreiben?`))return;states[existIdx]=entry;}
-  else{states.unshift(entry);if(states.length>50)states.pop();}
-  setStates(states);
+  const res=getRes(); const cur=getCurLevels();
+  if(_currentUserId){
+    try{
+      await dbSaveState(_currentUserId,name,currentStyle,res,cur);
+      _statesCache=await dbLoadStates(_currentUserId);
+    }catch(e){ alert('Fehler: '+e.message); return; }
+  } else {
+    const states=getStates();
+    const existIdx=states.findIndex(s=>s.name===name);
+    const entry={name,date:new Date().toISOString(),style:currentStyle,res,cur};
+    if(existIdx>=0){if(!confirm(`"${name}" überschreiben?`))return; states[existIdx]=entry;}
+    else{states.unshift(entry); if(states.length>50)states.pop();}
+    setStates(states);
+  }
   updateProfileDropdown();
-  const ind=document.getElementById('savedIndicator');ind.textContent='✅ '+name+' gespeichert';
-  ind.classList.add('show');setTimeout(()=>{ind.textContent='✅ Gespeichert';ind.classList.remove('show');},2500);
+  const ind=document.getElementById('savedIndicator');
+  ind.textContent='✅ '+name+' gespeichert'; ind.classList.add('show');
+  setTimeout(()=>{ ind.textContent='✅ Gespeichert'; ind.classList.remove('show'); },2500);
 }
 
 function updateProfileDropdown(){
