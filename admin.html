@@ -67,7 +67,7 @@ tr:hover td{background:var(--hover)}
   <div style="display:flex;gap:.4rem">
     <button class="btn-nav" onclick="window.location.href='app.html'">⬅️ Zur App</button>
     <button class="btn-nav" onclick="loadAll()">🔄 Aktualisieren</button>
-    <button class="btn-nav" onclick="doLogout()" style="color:#f87171;border-color:#f87171">🚪 Logout</button>
+    <button class="btn-nav" onclick="sbLogout()" style="color:#f87171;border-color:#f87171">🚪 Logout</button>
   </div>
 </nav>
 
@@ -153,14 +153,14 @@ async function getProfile(userId){
   return data;
 }
 async function requireAuth(){
-  const session = await getSession();
+  const session = await sbGetSession();
   if(!session){ window.location.href='index.html'; return null; }
   return session;
 }
 async function requireAdmin(){
   const session = await requireAuth();
   if(!session) return null;
-  const profile = await getProfile(session.user.id);
+  const profile = await sbGetProfile(session.user.id);
   if(!profile || profile.role !== 'admin'){
     alert('Kein Admin-Zugang.');
     window.location.href='app.html';
@@ -180,7 +180,7 @@ async function logout(){
 }
 
 async function requireAuth(){
-  const session = await getSession();
+  const session = await sbGetSession();
   if(!session){
     window.location.href = 'index.html';
     return null;
@@ -191,7 +191,7 @@ async function requireAuth(){
 async function requireAdmin(){
   const session = await requireAuth();
   if(!session) return null;
-  const profile = await getProfile(session.user.id);
+  const profile = await sbGetProfile(session.user.id);
   if(!profile || profile.role !== 'admin'){
     alert('Kein Admin-Zugang.');
     window.location.href = 'app.html';
@@ -261,8 +261,15 @@ let _allData=null;
 let _adminProfile=null;
 
 async function init(){
-  const result = await requireAdmin();
-  if(!result)return;
+  const session = await sbGetSession();
+  if(!session){ window.location.replace('index.html'); return; }
+  const result = { session, profile: await sbGetProfile(session.user.id) };
+  if(!result.profile || result.profile.role !== 'admin'){
+    alert('Kein Admin-Zugang.');
+    window.location.replace('app.html');
+    return;
+  }
+  
   _adminProfile=result.profile;
   await loadAll();
 }
@@ -376,7 +383,7 @@ function showDetail(title, data){
 }
 function closeDetail(){document.getElementById('detailOverlay').classList.remove('show');}
 
-async function doLogout(){await logout();}
+
 
 init();
 </script>

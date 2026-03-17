@@ -183,7 +183,7 @@ tr:hover td{background:var(--hover)}
       <span id="userRole" style="font-size:.62rem;color:var(--muted)"></span>
     </div>
     <button class="btn-nav" id="adminBtn" style="display:none" onclick="window.location.href='admin.html'">👑 Admin</button>
-    <button class="btn-nav" onclick="doLogout()" style="color:#f87171;border-color:#f87171">🚪 Logout</button>
+    <button class="btn-nav" onclick="sbLogout()" style="color:#f87171;border-color:#f87171">🚪 Logout</button>
     <select id="profileSelect" onchange="loadProfile(this.value)"
       style="background:var(--inp);border:1px solid var(--border);border-radius:7px;
       padding:.28rem .52rem;color:var(--text);font-size:.73rem;outline:none;max-width:160px">
@@ -1008,7 +1008,7 @@ let _statesCache = [];
 function getStates(){return _statesCache;}
 function setStates(s){_statesCache=s;}
 
-async function doLogout(){await logout();}
+
 
 // (Funktion durch Supabase Auth ersetzt)
 
@@ -1043,27 +1043,36 @@ function autoSaveStyle(){localStorage.setItem(getUserKey('Style'),currentStyle);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-// ══ CONFIG ══
+
+// ══════════════════════════════════════════
+// SUPABASE CONFIG + AUTH
+// ══════════════════════════════════════════
 const SUPABASE_URL  = 'https://pocwtsbryvxwzdoitxtb.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvY3d0c2JyeXZ4d3pkb2l0eHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjI2MjAsImV4cCI6MjA4OTMzODYyMH0.DNgPGFaQkDFTQf7BhtYsysyAvX5VpSBn4WdVmRa4LaU';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-// ══ AUTH ══
-// ══════════════════════════════════════════════════
-// AUTH – Login, Registrierung, Session, Logout
-// ══════════════════════════════════════════════════
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-async function getSession(){
-  const { data } = await _sb.auth.getSession();
-  return data.session;
+async function sbGetSession(){
+  try{
+    const { data, error } = await _sb.auth.getSession();
+    if(error) return null;
+    return data?.session || null;
+  }catch(e){ return null; }
 }
 
-async function getProfile(userId){
-  const { data } = await _sb.from('profiles').select('*').eq('id', userId).single();
+async function sbGetProfile(userId){
+  try{
+    const { data } = await _sb.from('profiles').select('*').eq('id', userId).single();
+    return data || null;
+  }catch(e){ return null; }
+}
+
+async function sbLogin(email, password){
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password });
+  if(error) throw error;
   return data;
 }
 
-async function register(email, password, username){
+async function sbRegister(email, password, username){
   const { data, error } = await _sb.auth.signUp({
     email, password,
     options: { data: { username } }
@@ -1072,60 +1081,10 @@ async function register(email, password, username){
   return data;
 }
 
-async function logout(){
-  await _sb.auth.signOut();
-  window.location.href='index.html';
-}
-async function getProfile(userId){
-  const { data } = await _sb.from('profiles').select('*').eq('id', userId).single();
-  return data;
-}
-async function requireAuth(){
-  const session = await getSession();
-  if(!session){ window.location.href='index.html'; return null; }
-  return session;
-}
-async function requireAdmin(){
-  const session = await requireAuth();
-  if(!session) return null;
-  const profile = await getProfile(session.user.id);
-  if(!profile || profile.role !== 'admin'){
-    alert('Kein Admin-Zugang.');
-    window.location.href='app.html';
-    return null;
-  }
-  return { session, profile };
-}
-async function login(email, password){
-  const { data, error } = await _sb.auth.signInWithPassword({ email, password });
-  if(error) throw error;
-  return data;
-}
-
-async function logout(){
-  await _sb.auth.signOut();
-  window.location.href = 'index.html';
-}
-
-async function requireAuth(){
-  const session = await getSession();
-  if(!session){
-    window.location.href = 'index.html';
-    return null;
-  }
-  return session;
-}
-
-async function requireAdmin(){
-  const session = await requireAuth();
-  if(!session) return null;
-  const profile = await getProfile(session.user.id);
-  if(!profile || profile.role !== 'admin'){
-    alert('Kein Admin-Zugang.');
-    window.location.href = 'app.html';
-    return null;
-  }
-  return { session, profile };
+async function sbLogout(){
+  try{ await _sb.auth.signOut(); }catch(e){}
+  localStorage.clear();
+  window.location.replace('index.html');
 }
 
 // ══ DB ══
