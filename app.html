@@ -184,7 +184,7 @@ tr:hover td{background:var(--hover)}
       <span id="userRole" style="font-size:.62rem;color:var(--muted)"></span>
     </div>
     <button class="btn-nav" id="adminBtn" style="display:none" onclick="window.location.href='admin.html'">👑 Admin</button>
-    <button class="btn-nav" onclick="sbLogout()" style="color:#f87171;border-color:#f87171">🚪 Logout</button>
+    <button class="btn-nav" onclick="Auth.logout()" style="color:#f87171;border-color:#f87171">🚪 Logout</button>
     <select id="profileSelect" onchange="loadProfile(this.value)"
       style="background:var(--inp);border:1px solid var(--border);border-radius:7px;
       padding:.28rem .52rem;color:var(--text);font-size:.73rem;outline:none;max-width:160px">
@@ -957,6 +957,7 @@ function renderIstTable(){
 }
 function resetLv(id){const el=document.getElementById('ist_'+id);if(el){el.value=0;autoSave();}}
 
+function setIstFilter(f, btn) { filterIst(f); }
 function filterIst(f) {
   State.istFilter = f;
   document.querySelectorAll('.ist-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.f === f));
@@ -1113,55 +1114,67 @@ async function resetDB(){if(!confirm('Alle Änderungen zurücksetzen?'))return;B
   const btn = document.getElementById('themeBtn');
   if (btn) btn.textContent = State.darkMode ? '🌙' : '☀️';
 
-  // Auth-Check
-  const session = await Auth.getSession();
-  if (!session) { location.replace('index.html'); return; }
-  State.uid     = session.user.id;
-  State.profile = await Auth.getProfile(State.uid);
+  // Auth-Check: onAuthStateChange ist zuverlässiger als getSession()
+  // bei Page-Load wartet Supabase ggf. noch auf Token-Refresh
+  await new Promise(resolve => {
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+      subscription.unsubscribe();
 
-  // User-Badge
-  const uname = State.profile?.username ?? session.user.email;
-  [['userAvatar', uname.charAt(0).toUpperCase()],
-   ['userLabel',  uname],
-   ['userRole',   State.profile?.role === 'admin' ? '👑' : '']
-  ].forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.textContent = val; });
-  const adminBtn = document.getElementById('adminBtn');
-  if (adminBtn && State.profile?.role === 'admin') adminBtn.style.display = 'inline-block';
+      if (!session) {
+        location.replace('index.html');
+        resolve();
+        return;
+      }
 
-  // AutoSave aus Supabase laden
-  let loaded = false;
-  try {
-    const as = await DB.loadAutoSave();
-    if (as) {
-      const res = as.resources  ?? {};
-      const cur = as.cur_levels ?? {};
-      Storage.setResCache(res);
-      Storage.setCurLevels(cur);
-      RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if (el) el.value = res[k] ?? 0; });
-      State.currentStyle = as.style ?? 'hq';
-      loaded = true;
-    }
-  } catch (e) { console.warn('AutoSave:', e.message); }
+      State.uid     = session.user.id;
+      State.profile = await Auth.getProfile(State.uid);
 
-  if (!loaded) {
-    const res = Storage.getResCache();
-    RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if (el && res[k] !== undefined) el.value = res[k]; });
-    State.currentStyle = localStorage.getItem(key('Style')) ?? 'hq';
-  }
-  document.querySelectorAll('.sty-btn').forEach(b => b.classList.toggle('active', b.dataset.sty === State.currentStyle));
+      // User-Badge
+      const uname = State.profile?.username ?? session.user.email;
+      [['userAvatar', uname.charAt(0).toUpperCase()],
+       ['userLabel',  uname],
+       ['userRole',   State.profile?.role === 'admin' ? '👑' : '']
+      ].forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.textContent = val; });
+      const adminBtn = document.getElementById('adminBtn');
+      if (adminBtn && State.profile?.role === 'admin') adminBtn.style.display = 'inline-block';
 
-  // Spielstände laden
-  try { State.statesCache = await DB.loadStates(); } catch { State.statesCache = []; }
+      // AutoSave aus Supabase laden
+      let loaded = false;
+      try {
+        const as = await DB.loadAutoSave();
+        if (as) {
+          const res = as.resources  ?? {};
+          const cur = as.cur_levels ?? {};
+          Storage.setResCache(res);
+          Storage.setCurLevels(cur);
+          RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if (el) el.value = res[k] ?? 0; });
+          State.currentStyle = as.style ?? 'hq';
+          loaded = true;
+        }
+      } catch (e) { console.warn('AutoSave:', e.message); }
 
-  // Ist-Stand rendern + befüllen
-  renderIstTable();
-  const cur = Storage.getCurLevels();
-  BUILDINGS.forEach(b => {
-    const el = document.getElementById('ist_' + b.id);
-    if (el && cur[b.id] !== undefined) el.value = cur[b.id];
+      if (!loaded) {
+        const res = Storage.getResCache();
+        RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if (el && res[k] !== undefined) el.value = res[k]; });
+        State.currentStyle = localStorage.getItem(key('Style')) ?? 'hq';
+      }
+      document.querySelectorAll('.sty-btn').forEach(b => b.classList.toggle('active', b.dataset.sty === State.currentStyle));
+
+      // Spielstände laden
+      try { State.statesCache = await DB.loadStates(); } catch { State.statesCache = []; }
+
+      // Ist-Stand rendern + befüllen
+      renderIstTable();
+      const cur = Storage.getCurLevels();
+      BUILDINGS.forEach(b => {
+        const el = document.getElementById('ist_' + b.id);
+        if (el && cur[b.id] !== undefined) el.value = cur[b.id];
+      });
+
+      updateProfileDropdown();
+      resolve();
+    });
   });
-
-  updateProfileDropdown();
 })();
 </script>
 </body>
