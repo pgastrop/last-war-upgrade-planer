@@ -1,177 +1,227 @@
 <!DOCTYPE html>
 <html lang="de" data-theme="dark">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Last War – Login</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-[data-theme="dark"] {--bg:#0b0f14;--card:#13191f;--border:#2a3548;--text:#e6edf3;--muted:#7d8fa8;--inp:#0d1520}
-[data-theme="light"]{--bg:#f0f4f8;--card:#fff;--border:#c8d6e5;--text:#1a2535;--muted:#6b7c93;--inp:#f8fafc}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;
-  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
-.box{background:var(--card);border:1px solid #2a3548;border-radius:16px;padding:2rem;width:min(400px,100%)}
-.logo{text-align:center;font-size:2.5rem;margin-bottom:.3rem}
-h1{text-align:center;color:#f0a500;font-size:1.2rem;margin-bottom:.2rem}
-.sub{text-align:center;color:var(--muted);font-size:.78rem;margin-bottom:1.5rem}
-.tabs{display:flex;border-radius:8px;overflow:hidden;border:1px solid #2a3548;margin-bottom:1.3rem}
-.tab{flex:1;padding:.5rem;background:transparent;border:none;color:var(--muted);
-  font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s}
-.tab.active{background:#f0a500;color:#000}
-.field{margin-bottom:.8rem}
-label{display:block;font-size:.76rem;color:var(--muted);margin-bottom:.3rem}
-input{width:100%;background:var(--inp);border:1px solid #2a3548;border-radius:8px;
-  padding:.52rem .72rem;color:var(--text);font-size:.88rem;outline:none;transition:border .15s}
-input:focus{border-color:#f0a500}
-.btn{width:100%;padding:.62rem;background:#f0a500;color:#000;font-weight:800;
-  font-size:.95rem;border:none;border-radius:9px;cursor:pointer;margin-top:.4rem}
-.btn:disabled{opacity:.4;cursor:default}
-.msg{text-align:center;font-size:.78rem;margin-top:.8rem;padding:.5rem;border-radius:7px;display:none}
-.msg.ok{background:#0d2a18;color:#4ade80;display:block}
-.msg.err{background:#3a1a1a;color:#f87171;display:block}
-.hint{font-size:.7rem;color:var(--muted);text-align:center;margin-top:1rem}
-.theme-btn{position:fixed;top:.8rem;right:.8rem;background:var(--card);
-  border:1px solid #2a3548;border-radius:8px;padding:.3rem .6rem;cursor:pointer;font-size:.9rem}
+:root {
+  --accent:#f0a500; --green:#2ea043; --red:#cf222e;
+}
+[data-theme="dark"]  {--bg:#0b0f14;--card:#13191f;--border:#2a3548;--text:#e6edf3;--muted:#7d8fa8;--inp:#0d1520}
+[data-theme="light"] {--bg:#f0f4f8;--card:#fff;   --border:#c8d6e5;--text:#1a2535;--muted:#6b7c93;--inp:#f8fafc}
+*, *::before, *::after {box-sizing:border-box; margin:0; padding:0}
+body {
+  background:var(--bg); color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  min-height:100vh; display:flex; align-items:center;
+  justify-content:center; padding:1rem;
+}
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:16px; padding:2rem; width:min(400px,100%);
+}
+.logo  {text-align:center; font-size:2.5rem; margin-bottom:.3rem}
+h1     {text-align:center; color:var(--accent); font-size:1.2rem; margin-bottom:.2rem}
+.sub   {text-align:center; color:var(--muted); font-size:.78rem; margin-bottom:1.5rem}
+.tabs  {
+  display:flex; border-radius:8px; overflow:hidden;
+  border:1px solid var(--border); margin-bottom:1.3rem;
+}
+.tab {
+  flex:1; padding:.5rem; background:transparent; border:none;
+  color:var(--muted); font-size:.82rem; font-weight:600;
+  cursor:pointer; transition:background .15s, color .15s;
+}
+.tab.active {background:var(--accent); color:#000}
+.field {margin-bottom:.8rem}
+label  {display:block; font-size:.76rem; color:var(--muted); margin-bottom:.3rem}
+input  {
+  width:100%; background:var(--inp); border:1px solid var(--border);
+  border-radius:8px; padding:.52rem .72rem; color:var(--text);
+  font-size:.88rem; outline:none; transition:border-color .15s;
+}
+input:focus {border-color:var(--accent)}
+.btn {
+  width:100%; padding:.62rem; background:var(--accent); color:#000;
+  font-weight:800; font-size:.95rem; border:none; border-radius:9px;
+  cursor:pointer; margin-top:.4rem; transition:opacity .15s;
+}
+.btn:hover   {opacity:.85}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+.msg {
+  text-align:center; font-size:.78rem; margin-top:.8rem;
+  padding:.5rem; border-radius:7px; display:none;
+}
+.msg.ok  {background:#0d2a18; color:#4ade80; display:block}
+.msg.err {background:#3a1a1a; color:#f87171; display:block}
+.hint {font-size:.7rem; color:var(--muted); text-align:center; margin-top:1rem}
+.theme-btn {
+  position:fixed; top:.8rem; right:.8rem;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:8px; padding:.3rem .6rem; cursor:pointer; font-size:.9rem;
+}
 </style>
 </head>
 <body>
-<button class="theme-btn" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'">🌙</button>
-<div class="box">
-  <div class="logo">🌑</div>
+<button class="theme-btn" onclick="toggleTheme()" aria-label="Theme wechseln">🌙</button>
+
+<div class="card">
+  <div class="logo" role="img" aria-label="Logo">🌑</div>
   <h1>Last War – Upgrade-Planer</h1>
-  <div class="sub">Season 4 · Bitte anmelden</div>
-  <div class="tabs">
-    <button class="tab active" id="tabLogin" onclick="showTab('login')">🔑 Login</button>
-    <button class="tab" id="tabReg" onclick="showTab('reg')">📝 Registrieren</button>
+  <p class="sub">Season 4 · Bitte anmelden</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" id="tabLogin" role="tab"
+      onclick="showTab('login')">🔑 Login</button>
+    <button class="tab" id="tabReg" role="tab"
+      onclick="showTab('reg')">📝 Registrieren</button>
   </div>
 
-  <div id="formLogin">
-    <div class="field"><label>E-Mail</label>
-      <input type="email" id="lEmail" placeholder="deine@email.de"/></div>
-    <div class="field"><label>Passwort</label>
+  <!-- LOGIN -->
+  <div id="formLogin" role="tabpanel">
+    <div class="field">
+      <label for="lEmail">E-Mail</label>
+      <input type="email" id="lEmail" placeholder="deine@email.de" autocomplete="email"/>
+    </div>
+    <div class="field">
+      <label for="lPass">Passwort</label>
       <input type="password" id="lPass" placeholder="••••••••"
-        onkeydown="if(event.key==='Enter')doLogin()"/></div>
+        autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') doLogin()"/>
+    </div>
     <button class="btn" id="btnLogin" onclick="doLogin()">🔑 Anmelden</button>
   </div>
 
-  <div id="formReg" style="display:none">
-    <div class="field"><label>Benutzername</label>
-      <input type="text" id="rName" placeholder="Dein Spielname"/></div>
-    <div class="field"><label>E-Mail</label>
-      <input type="email" id="rEmail" placeholder="deine@email.de"/></div>
-    <div class="field"><label>Passwort</label>
-      <input type="password" id="rPass" placeholder="mind. 6 Zeichen"/></div>
-    <div class="field"><label>Passwort wiederholen</label>
+  <!-- REGISTRIEREN -->
+  <div id="formReg" role="tabpanel" hidden>
+    <div class="field">
+      <label for="rName">Benutzername</label>
+      <input type="text" id="rName" placeholder="Dein Spielname" autocomplete="username"/>
+    </div>
+    <div class="field">
+      <label for="rEmail">E-Mail</label>
+      <input type="email" id="rEmail" placeholder="deine@email.de" autocomplete="email"/>
+    </div>
+    <div class="field">
+      <label for="rPass">Passwort</label>
+      <input type="password" id="rPass" placeholder="mind. 6 Zeichen"
+        autocomplete="new-password"/>
+    </div>
+    <div class="field">
+      <label for="rPass2">Passwort wiederholen</label>
       <input type="password" id="rPass2" placeholder="••••••••"
-        onkeydown="if(event.key==='Enter')doRegister()"/></div>
+        autocomplete="new-password"
+        onkeydown="if(event.key==='Enter') doRegister()"/>
+    </div>
     <button class="btn" id="btnReg" onclick="doRegister()">📝 Konto erstellen</button>
   </div>
 
-  <div class="msg" id="msg"></div>
-  <div class="hint">Daten werden sicher in Supabase gespeichert.</div>
+  <div class="msg" id="msg" role="alert" aria-live="polite"></div>
+  <p class="hint">Deine Daten werden sicher in Supabase gespeichert.</p>
 </div>
 
-
 <script>
-
-// ══════════════════════════════════════════
-// SUPABASE CONFIG + AUTH
-// ══════════════════════════════════════════
+// ── Konstanten ────────────────────────────────────────────────
 const SUPABASE_URL  = 'https://pocwtsbryvxwzdoitxtb.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvY3d0c2JyeXZ4d3pkb2l0eHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjI2MjAsImV4cCI6MjA4OTMzODYyMH0.DNgPGFaQkDFTQf7BhtYsysyAvX5VpSBn4WdVmRa4LaU';
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-async function sbGetSession(){
-  try{
-    const { data, error } = await _sb.auth.getSession();
-    if(error) return null;
-    return data?.session || null;
-  }catch(e){ return null; }
+// ── Auth API ──────────────────────────────────────────────────
+const Auth = {
+  async getSession() {
+    const { data, error } = await sb.auth.getSession();
+    return error ? null : (data?.session ?? null);
+  },
+  async login(email, password) {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  },
+  async register(email, password, username) {
+    const { data, error } = await sb.auth.signUp({
+      email, password,
+      options: { data: { username } }
+    });
+    if (error) throw error;
+    return data;
+  }
+};
+
+// ── UI Helpers ────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function showMsg(text, ok = false) {
+  const el = $('msg');
+  el.textContent = text;
+  el.className = text ? `msg ${ok ? 'ok' : 'err'}` : 'msg';
 }
 
-async function sbGetProfile(userId){
-  try{
-    const { data } = await _sb.from('profiles').select('*').eq('id', userId).single();
-    return data || null;
-  }catch(e){ return null; }
+function setLoading(btnId, loading, label) {
+  const btn = $(btnId);
+  btn.disabled = loading;
+  btn.textContent = loading ? '⏳ Bitte warten…' : label;
 }
 
-async function sbLogin(email, password){
-  const { data, error } = await _sb.auth.signInWithPassword({ email, password });
-  if(error) throw error;
-  return data;
-}
-
-async function sbRegister(email, password, username){
-  const { data, error } = await _sb.auth.signUp({
-    email, password,
-    options: { data: { username } }
-  });
-  if(error) throw error;
-  return data;
-}
-
-async function sbLogout(){
-  try{ await _sb.auth.signOut(); }catch(e){}
-  localStorage.clear();
-  window.location.replace('index.html');
-}
-
-function showTab(t){
-  document.getElementById('formLogin').style.display = t==='login' ? 'block' : 'none';
-  document.getElementById('formReg').style.display   = t==='reg'   ? 'block' : 'none';
-  document.getElementById('tabLogin').classList.toggle('active', t==='login');
-  document.getElementById('tabReg').classList.toggle('active',   t==='reg');
+function showTab(tab) {
+  $('formLogin').hidden = tab !== 'login';
+  $('formReg').hidden   = tab !== 'reg';
+  $('tabLogin').classList.toggle('active', tab === 'login');
+  $('tabReg').classList.toggle('active',   tab === 'reg');
   showMsg('');
 }
 
-function showMsg(txt, ok=false){
-  const m = document.getElementById('msg');
-  m.textContent = txt;
-  m.className = 'msg' + (txt ? (ok ? ' ok' : ' err') : '');
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('lwTheme', next);
 }
 
-async function doLogin(){
-  const email = document.getElementById('lEmail').value.trim();
-  const pass  = document.getElementById('lPass').value;
-  if(!email || !pass){ showMsg('Bitte E-Mail und Passwort eingeben.'); return; }
-  const btn = document.getElementById('btnLogin');
-  btn.disabled = true; btn.textContent = '⏳ Anmelden…';
-  try{
-    await sbLogin(email, pass);
+// ── Actions ───────────────────────────────────────────────────
+async function doLogin() {
+  const email = $('lEmail').value.trim();
+  const pass  = $('lPass').value;
+  if (!email || !pass) { showMsg('Bitte E-Mail und Passwort eingeben.'); return; }
+  setLoading('btnLogin', true, '🔑 Anmelden');
+  try {
+    await Auth.login(email, pass);
     showMsg('✅ Angemeldet! Weiterleitung…', true);
-    setTimeout(() => window.location.replace('app.html'), 800);
-  }catch(e){
+    setTimeout(() => window.location.replace('app.html'), 600);
+  } catch (e) {
     showMsg('❌ ' + e.message);
+    setLoading('btnLogin', false, '🔑 Anmelden');
   }
-  btn.disabled = false; btn.textContent = '🔑 Anmelden';
 }
 
-async function doRegister(){
-  const name  = document.getElementById('rName').value.trim();
-  const email = document.getElementById('rEmail').value.trim();
-  const pass  = document.getElementById('rPass').value;
-  const pass2 = document.getElementById('rPass2').value;
-  if(!name || !email || !pass){ showMsg('Alle Felder ausfüllen.'); return; }
-  if(pass !== pass2){ showMsg('Passwörter stimmen nicht überein.'); return; }
-  if(pass.length < 6){ showMsg('Passwort mind. 6 Zeichen.'); return; }
-  const btn = document.getElementById('btnReg');
-  btn.disabled = true; btn.textContent = '⏳ Registrieren…';
-  try{
-    await sbRegister(email, pass, name);
+async function doRegister() {
+  const name  = $('rName').value.trim();
+  const email = $('rEmail').value.trim();
+  const pass  = $('rPass').value;
+  const pass2 = $('rPass2').value;
+  if (!name || !email || !pass)  { showMsg('Alle Felder ausfüllen.'); return; }
+  if (pass !== pass2)            { showMsg('Passwörter stimmen nicht überein.'); return; }
+  if (pass.length < 6)           { showMsg('Passwort mind. 6 Zeichen.'); return; }
+  setLoading('btnReg', true, '📝 Konto erstellen');
+  try {
+    await Auth.register(email, pass, name);
     showMsg('✅ Konto erstellt! Bitte E-Mail bestätigen, dann einloggen.', true);
     setTimeout(() => showTab('login'), 2500);
-  }catch(e){
+  } catch (e) {
     showMsg('❌ ' + e.message);
+  } finally {
+    setLoading('btnReg', false, '📝 Konto erstellen');
   }
-  btn.disabled = false; btn.textContent = '📝 Konto erstellen';
 }
 
-// Bereits eingeloggt? → direkt weiter
+// ── Init ──────────────────────────────────────────────────────
 (async () => {
-  const session = await sbGetSession();
-  if(session) window.location.replace('app.html');
+  // Theme
+  const theme = localStorage.getItem('lwTheme') ?? 'dark';
+  document.documentElement.dataset.theme = theme;
+  // Bereits eingeloggt? → direkt weiter
+  const session = await Auth.getSession();
+  if (session) window.location.replace('app.html');
 })();
 </script>
 </body>

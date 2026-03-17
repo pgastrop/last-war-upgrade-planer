@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="de" data-theme="dark">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Last War S4 – Upgrade-Planer v5.0</title>
+<title>Last War S4 – Upgrade-Planer v5.1</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 [data-theme="dark"]{--bg:#0b0f14;--card:#13191f;--card2:#1a2230;--border:#2a3548;--text:#e6edf3;--muted:#7d8fa8;--inp:#0d1520;--hover:#1c2a3a;--modal-bg:rgba(0,0,0,.75)}
 [data-theme="light"]{--bg:#f0f4f8;--card:#ffffff;--card2:#eef2f7;--border:#c8d6e5;--text:#1a2535;--muted:#6b7c93;--inp:#f8fafc;--hover:#e8f0fb;--modal-bg:rgba(0,0,0,.4)}
@@ -168,7 +168,7 @@ tr:hover td{background:var(--hover)}
 .btn-modal-close{padding:.46rem .9rem;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:.83rem}
 </style>
 </head>
-<body>
+
 <nav>
   <div class="nav-l">
     <span style="font-size:1.5rem">🌑</span>
@@ -349,12 +349,27 @@ tr:hover td{background:var(--hover)}
 </div>
 
 <script>
-// ════════════════════════════════════════════════════
-// DATENBASIS – verifiziert von cpt-hedge.com (Mio.)
-// Kosten: food, iron, gold, oil, stone, quartz
-// hq_req = HQ-Level das vorhanden sein muss
-// Öl ab Level 31 (Age of Oil / Base Expansion)
-// ════════════════════════════════════════════════════
+// ╔══════════════════════════════════════════════════════════╗
+// ║  Last War S4 – Upgrade-Planer v5.1                      ║
+// ║  Clean Build · Supabase Auth · Multi-User               ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// ═══ 1. KONSTANTEN ══════════════════════════════════════════
+const SUPABASE_URL  = 'https://pocwtsbryvxwzdoitxtb.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvY3d0c2JyeXZ4d3pkb2l0eHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjI2MjAsImV4cCI6MjA4OTMzODYyMH0.DNgPGFaQkDFTQf7BhtYsysyAvX5VpSBn4WdVmRa4LaU';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const RES_KEYS  =['food','iron','gold','oil','stone','quartz'];
+const RES_ICO   ={food:'🌾',iron:'⚙️',gold:'💰',oil:'🔩',stone:'🪨',quartz:'💎'};
+const STYLE_MULT={
+  hq:      {hq:1.6,mil:1.0,eco:0.6,def:0.7,s4:0.8},
+  balanced:{hq:1.2,mil:1.1,eco:1.0,def:0.9,s4:1.0},
+  eco:     {hq:0.8,mil:0.7,eco:1.6,def:0.7,s4:1.0},
+  mil:     {hq:1.0,mil:1.6,eco:0.6,def:1.2,s4:0.8},
+  s4:      {hq:1.0,mil:0.8,eco:0.6,def:0.6,s4:1.7},
+};
+let currentStyle='hq',currentSort='score',progFilter='all',editorFilter='all';
+// ═══ 2. KOSTENDATENBANK ═════════════════════════════════════
 const DEFAULT_DB=[
   {id:'hq',name:'Hauptquartier (HQ)',type:'hq',levels:[
     {l:1, food:0,    iron:0,    gold:0,   oil:0,      stone:0,quartz:0,hq_req:0, sb:100},
@@ -655,58 +670,279 @@ const STYLE_MULT={
   s4:      {hq:1.0,mil:0.8,eco:0.6,def:0.6,s4:1.7},
 };
 let currentStyle='hq',currentSort='score',progFilter='all',editorFilter='all';
-let darkMode=true,lastResults=[],lastCant=[],_istFilter='all',autoSaveTimer=null;
-
 function getDB(){const r=localStorage.getItem('lwDB_v41');return r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_DB));}
-function setDB(db){localStorage.setItem('lwDB_v41',JSON.stringify(db));}
-let BUILDINGS=getDB();
-// Storage-Funktionen weiter unten (user-spezifisch)
+async function setDB(db){localStorage.setItem('lwDB_v41',JSON.stringify(db));}
+let BUILDINGS=getDB
 
-async function autoSave(){
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer=setTimeout(async()=>{
-    const res={};RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);if(el)res[k]=el.value;});
-    setResCache(res);
-    const cur={};BUILDINGS.forEach(b=>{const el=document.getElementById('ist_'+b.id);if(el)cur[b.id]=parseInt(el.value)||0;});
-    setCurLevels(cur);
-    localStorage.setItem('lwStyle_'+(_currentUserId||'guest'),currentStyle);
-    // Supabase AutoSave
-    if(_currentUserId){
-      try{ await dbAutoSave(_currentUserId, currentStyle, res, cur); }catch(e){}
+// ═══ 3. APP-STATE ═══════════════════════════════════════════
+const State = {
+  uid:           null,
+  profile:       null,
+  statesCache:   [],
+  currentStyle:  'hq',
+  darkMode:      true,
+  autoSaveTimer: null,
+  lastResults:   [],
+  lastCant:      [],
+  istFilter:     'all',
+};
+
+// ═══ 4. AUTH ════════════════════════════════════════════════
+const Auth = {
+  async getSession() {
+    try {
+      const { data, error } = await sb.auth.getSession();
+      return error ? null : (data?.session ?? null);
+    } catch { return null; }
+  },
+  async getProfile(userId) {
+    try {
+      const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
+      return data ?? null;
+    } catch { return null; }
+  },
+  logout() {
+    sb.auth.signOut().catch(() => {});
+    localStorage.clear();
+    location.replace('index.html');
+  }
+};
+
+// ═══ 5. STORAGE ═════════════════════════════════════════════
+const key = suffix => `lw${suffix}_${State.uid ?? 'guest'}`;
+
+const Storage = {
+  getCurLevels()  { return JSON.parse(localStorage.getItem(key('CurLevels')) ?? '{}'); },
+  setCurLevels(o) { localStorage.setItem(key('CurLevels'), JSON.stringify(o)); },
+  getResCache()   { return JSON.parse(localStorage.getItem(key('ResCache'))   ?? '{}'); },
+  setResCache(o)  { localStorage.setItem(key('ResCache'),  JSON.stringify(o)); },
+};
+
+// Shims für Spiel-Logik-Funktionen
+const getCurLevels = ()  => Storage.getCurLevels();
+const setCurLevels = (o) => Storage.setCurLevels(o);
+const getStates    = ()  => State.statesCache;
+
+// ═══ 6. DATENBANK (Supabase) ════════════════════════════════
+const DB = {
+  async autoSave(style, resources, curLevels) {
+    if (!State.uid) return;
+    await sb.from('autosave').upsert(
+      { user_id: State.uid, style, resources, cur_levels: curLevels, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    );
+  },
+  async loadAutoSave() {
+    if (!State.uid) return null;
+    const { data } = await sb.from('autosave').select('*').eq('user_id', State.uid).single();
+    return data ?? null;
+  },
+  async saveState(name, style, resources, curLevels) {
+    const { data: existing } = await sb.from('game_states')
+      .select('id').eq('user_id', State.uid).eq('name', name).single();
+    if (existing) {
+      await sb.from('game_states')
+        .update({ style, resources, cur_levels: curLevels, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    } else {
+      await sb.from('game_states')
+        .insert({ user_id: State.uid, name, style, resources, cur_levels: curLevels });
     }
-    const ind=document.getElementById('savedIndicator');ind.classList.add('show');
-    setTimeout(()=>ind.classList.remove('show'),2000);
-  },400);
+  },
+  async loadStates() {
+    const { data } = await sb.from('game_states')
+      .select('*').eq('user_id', State.uid)
+      .order('updated_at', { ascending: false });
+    return data ?? [];
+  },
+  async deleteState(id) {
+    await sb.from('game_states').delete().eq('id', id);
+  }
+};
+
+// ═══ 7. AUTOSAVE (debounced) ════════════════════════════════
+async function autoSave() {
+  clearTimeout(State.autoSaveTimer);
+  State.autoSaveTimer = setTimeout(async () => {
+    const res = {};
+    RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if (el) res[k] = el.value; });
+    const cur = {};
+    BUILDINGS.forEach(b => { const el = document.getElementById('ist_' + b.id); if (el) cur[b.id] = parseInt(el.value) || 0; });
+    Storage.setResCache(res);
+    Storage.setCurLevels(cur);
+    localStorage.setItem(key('Style'), State.currentStyle);
+    try { await DB.autoSave(State.currentStyle, res, cur); } catch {}
+    const ind = document.getElementById('savedIndicator');
+    if (ind) { ind.classList.add('show'); setTimeout(() => ind.classList.remove('show'), 2000); }
+  }, 400);
 }
 
-function toggleTheme(){
-  darkMode=!darkMode;
-  document.documentElement.dataset.theme=darkMode?'dark':'light';
-  document.getElementById('themeBtn').textContent=darkMode?'🌙':'☀️';
-  localStorage.setItem('lwTheme',darkMode?'dark':'light');
+// ═══ 8. SPIELSTÄNDE ═════════════════════════════════════════
+async function quickSave() {
+  const name = prompt('Profilname:', 'Stand ' + new Date().toLocaleString('de-DE'));
+  if (!name) return;
+  const res = getRes(); const cur = getCurLevels();
+  try {
+    await DB.saveState(name, State.currentStyle, res, cur);
+    State.statesCache = await DB.loadStates();
+  } catch (e) { alert('Fehler: ' + e.message); return; }
+  updateProfileDropdown();
+  const ind = document.getElementById('savedIndicator');
+  if (ind) {
+    ind.textContent = '✅ ' + name;
+    ind.classList.add('show');
+    setTimeout(() => { ind.textContent = '✅ Gespeichert'; ind.classList.remove('show'); }, 2500);
+  }
 }
 
-function showTab(name,btn){
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.m-tab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');
-  if(name==='tracker')renderTracker();
-  if(name==='editor')renderEditor();
+async function saveState() {
+  const nameEl = document.getElementById('saveName');
+  const name = nameEl.value.trim() || 'Stand ' + new Date().toLocaleString('de-DE');
+  const res = getRes(); const cur = getCurLevels();
+  try {
+    await DB.saveState(name, State.currentStyle, res, cur);
+    State.statesCache = await DB.loadStates();
+  } catch (e) { alert('Fehler: ' + e.message); return; }
+  nameEl.value = '';
+  renderSaveList();
 }
 
-document.querySelectorAll('.sty-btn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('.sty-btn').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');currentStyle=b.dataset.sty;autoSave();
+function loadState(idx) {
+  const s = State.statesCache[idx];
+  if (!s) return;
+  const sty = s.style ?? 'hq';
+  State.currentStyle = sty;
+  document.querySelectorAll('.sty-btn').forEach(b => b.classList.toggle('active', b.dataset.sty === sty));
+  const res = s.resources ?? s.res ?? {};
+  const cur = s.cur_levels ?? s.cur ?? {};
+  RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if (el) el.value = res[k] ?? 0; });
+  Storage.setCurLevels(cur);
+  BUILDINGS.forEach(b => { const el = document.getElementById('ist_' + b.id); if (el) el.value = cur[b.id] ?? 0; });
+  closeModal();
+}
+
+async function deleteState(idx) {
+  const entry = State.statesCache[idx];
+  if (!entry) return;
+  try {
+    if (entry.id) await DB.deleteState(entry.id);
+    State.statesCache = await DB.loadStates();
+  } catch {
+    State.statesCache.splice(idx, 1);
+  }
+  renderSaveList();
+  updateProfileDropdown();
+}
+
+function renderSaveList() {
+  updateProfileDropdown();
+  const el = document.getElementById('saveList');
+  if (!el) return;
+  el.innerHTML = State.statesCache.length
+    ? State.statesCache.map((s, i) => {
+        const dt = s.updated_at ?? s.date ?? '';
+        return `<div class="save-item">
+          <div>
+            <div style="font-size:.82rem"><strong>${s.name}</strong></div>
+            <div class="meta">Stil: ${s.style ?? '—'} · ${dt ? new Date(dt).toLocaleString('de-DE') : ''}</div>
+          </div>
+          <div class="save-acts">
+            <button class="btn-load" onclick="loadState(${i})">▶ Laden</button>
+            <button class="btn-del-save" onclick="deleteState(${i})">🗑</button>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:.5rem">Keine Stände gespeichert</div>';
+}
+
+function updateProfileDropdown() {
+  const sel = document.getElementById('profileSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">– Profil laden –</option>' +
+    State.statesCache.map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
+}
+
+function loadProfile(idx) {
+  if (idx === '') return;
+  loadState(parseInt(idx));
+  document.getElementById('profileSelect').value = '';
+}
+
+// ═══ 9. MODAL ═══════════════════════════════════════════════
+function openModal()  { renderSaveList(); document.getElementById('modalOverlay').classList.add('show'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+// ═══ 10. HILFSFUNKTIONEN ════════════════════════════════════
+function getRes() {
+  const res = {};
+  RES_KEYS.forEach(k => {
+    const el = document.getElementById('r_' + k);
+    res[k] = el ? parseFloat(el.value) || 0 : 0;
   });
-});
+  return res;
+}
 
-// ════ IST-STAND ════
-function setIstFilter(f,btn){_istFilter=f;document.querySelectorAll('.if-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderIstTable();}
+function toggleTheme() {
+  State.darkMode = !State.darkMode;
+  const theme = State.darkMode ? 'dark' : 'light';
+  document.documentElement.dataset.theme = theme;
+  document.getElementById('themeBtn').textContent = State.darkMode ? '🌙' : '☀️';
+  localStorage.setItem('lwTheme', theme);
+}
 
+function setStyle(sty) {
+  State.currentStyle = sty;
+  document.querySelectorAll('.sty-btn').forEach(b => b.classList.toggle('active', b.dataset.sty === sty));
+  autoSave();
+}
+
+function exportCSV() {
+  if (!State.lastResults.length) { alert('Erst berechnen!'); return; }
+  const rows = [['Gebäude','Von','Auf','Food','Iron','Gold','Oil','Stone','Quartz','Score']];
+  State.lastResults.forEach(r => rows.push([
+    r.name, r.from, r.to, r.food||0, r.iron||0, r.gold||0, r.oil||0, r.stone||0, r.quartz||0, r.score||0
+  ]));
+  const csv = rows.map(r => r.join(';')).join('\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv),
+    download: 'LastWar_Upgrades_' + new Date().toISOString().slice(0,10) + '.csv'
+  });
+  a.click();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify({
+    version:'5.1', exported: new Date().toISOString(),
+    states: State.statesCache,
+    autoSave: { res: getRes(), cur: getCurLevels(), style: State.currentStyle }
+  }, null, 2)], { type:'application/json' });
+  Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: `LastWar_Backup_${new Date().toISOString().slice(0,10)}.json`
+  }).click();
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (d.states)    State.statesCache = d.states;
+      if (d.autoSave?.res) Storage.setResCache(d.autoSave.res);
+      if (d.autoSave?.cur) Storage.setCurLevels(d.autoSave.cur);
+      location.reload();
+    } catch (err) { alert('Import-Fehler: ' + err.message); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ═══ 11. IST-STAND TABELLE ══════════════════════════════════
 function renderIstTable(){
   const cur=getCurLevels();
-  const list=_istFilter==='all'?BUILDINGS:BUILDINGS.filter(b=>b.type===_istFilter);
+  const list=State.istFilter==='all'?BUILDINGS:BUILDINGS.filter(b=>b.type===State.istFilter);
   document.getElementById('istBody').innerHTML=list.map(b=>{
     const maxLv=b.levels[b.levels.length-1]?.l||0;
     const curLv=cur[b.id]||0;
@@ -719,12 +955,15 @@ function renderIstTable(){
     </tr>`;
   }).join('');
 }
-
 function resetLv(id){const el=document.getElementById('ist_'+id);if(el){el.value=0;autoSave();}}
 
-// ════ BERECHNUNG ════
-function getRes(){const r={};RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);r[k]=el?parseFloat(el.value)||0:0;});return r;}
+function filterIst(f) {
+  State.istFilter = f;
+  document.querySelectorAll('.ist-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+  renderIstTable();
+}
 
+// ═══ 12. SPIEL-LOGIK (calculate, tracker, editor) ═══════════
 function calculate(){
   const res=getRes();const cur=getCurLevels();const mult=STYLE_MULT[currentStyle];
   const canDo=[],cant=[];
@@ -741,7 +980,7 @@ function calculate(){
     const entry={id:b.id,name:b.name,type:b.type,fromLv:curLv,toLv:nextLv.l,cost:nextLv,ok,score,total};
     if(feasible)canDo.push(entry);else cant.push(entry);
   }
-  lastResults=canDo;lastCant=cant;renderResults(currentSort);
+  State.lastResults=canDo;State.lastCant=cant;renderResults(currentSort);
 }
 
 function sortBy(key,btn){
@@ -753,7 +992,7 @@ function renderResults(sortKey){
   document.getElementById('resultSection').style.display='block';
   document.getElementById('start-hint').style.display='none';
   const res=getRes();
-  const sorted=[...lastResults].sort((a,b)=>sortKey==='score'?b.score-a.score:sortKey==='cost'?b.total-a.total:a.name.localeCompare(b.name));
+  const sorted=[...State.lastResults].sort((a,b)=>sortKey==='score'?b.score-a.score:sortKey==='cost'?b.total-a.total:a.name.localeCompare(b.name));
   const maxScore=Math.max(sorted[0]?.score||1,1);
   const empty=document.getElementById('emptyState');
   document.getElementById('statsBar').innerHTML=`<span class="ok">✅ ${sorted.length} jetzt upgradebar</span><span style="margin-left:.5rem">· Spielstil: <strong>${currentStyle}</strong> · Daten: Level 1–35 inkl. Öl</span>`;
@@ -776,10 +1015,10 @@ function renderResults(sortKey){
     }).join('');
   }
   const cantSection=document.getElementById('cantSection');
-  if(!lastCant.length){cantSection.style.display='none';return;}
+  if(!State.lastCant.length){cantSection.style.display='none';return;}
   cantSection.style.display='block';
-  document.getElementById('cantStats').innerHTML=`<span class="no">🚫 ${lastCant.length} nächste Upgrades noch nicht finanzierbar</span>`;
-  document.getElementById('cantBody').innerHTML=lastCant.map(r=>{
+  document.getElementById('cantStats').innerHTML=`<span class="no">🚫 ${State.lastCant.length} nächste Upgrades noch nicht finanzierbar</span>`;
+  document.getElementById('cantBody').innerHTML=State.lastCant.map(r=>{
     const costHtml=RES_KEYS.map(k=>r.cost[k]>0?`<span class="chip${r.ok[k]?'':' warn'}">${RES_ICO[k]}${r.cost[k]}</span>`:'').join('');
     const miss=RES_KEYS.filter(k=>!r.ok[k]&&r.cost[k]>0).map(k=>`${RES_ICO[k]}−${Math.max(0,r.cost[k]-(res[k]||0)).toFixed(2)}M`);
     return `<tr>
@@ -859,362 +1098,71 @@ function setEF(f,btn){editorFilter=f;document.querySelectorAll('.ef-btn').forEac
 function updateCell(bid,lvl,field,val){const b=BUILDINGS.find(b=>b.id===bid);if(!b)return;const lv=b.levels.find(l=>l.l===lvl);if(!lv)return;lv[field]=isNaN(parseFloat(val))?val:parseFloat(val);}
 function delRow(bid,lvl){const b=BUILDINGS.find(b=>b.id===bid);if(!b)return;b.levels=b.levels.filter(l=>l.l!==lvl);renderEditor();}
 function addEditorRow(){BUILDINGS.push({id:'custom_'+Date.now(),name:'Neues Gebäude',type:'eco',levels:[{l:1,food:0,iron:0,gold:0,oil:0,stone:0,quartz:0,hq_req:1,sb:60}]});editorFilter='all';renderEditor();renderIstTable();}
-function saveDB(){setDB(BUILDINGS);const btn=document.querySelector('.btn-save-db');btn.textContent='✅ Gespeichert!';setTimeout(()=>btn.textContent='💾 Speichern',2000);}
-function resetDB(){if(!confirm('Alle Änderungen zurücksetzen?'))return;BUILDINGS=JSON.parse(JSON.stringify(DEFAULT_DB));localStorage.removeItem('lwDB_v41');renderEditor();renderIstTable();}
+async function saveDB(){setDB(BUILDINGS);const btn=document.querySelector('.btn-save-db');btn.textContent='✅ Gespeichert!';setTimeout(()=>btn.textContent='💾 Speichern',2000);}
+async function resetDB(){if(!confirm('Alle Änderungen zurücksetzen?'))return;BUILDINGS=JSON.parse(JSON.stringify(DEFAULT_DB));localStorage.removeItem('lwDB_v41');renderEditor();renderIstTable();}
 
 // ════ SPIELSTÄNDE ════
-function openModal(){renderSaveList();document.getElementById('modalOverlay').classList.add('show');}
-async function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
-async function saveState(){
-  const name=document.getElementById('saveName').value.trim()||'Stand '+new Date().toLocaleString('de-DE');
-  const res=getRes();const cur=getCurLevels();
-  if(_currentUserId){
-    try{
-      await dbSaveState(_currentUserId,name,currentStyle,res,cur);
-      _statesCache=await dbLoadStates(_currentUserId);
-    }catch(e){alert('Fehler beim Speichern: '+e.message);return;}
-  } else {
-    const states=getStates();
-    states.unshift({name,date:new Date().toISOString(),style:currentStyle,res,cur});
-    if(states.length>50)states.pop();setStates(states);
-  }
-  document.getElementById('saveName').value='';
-  renderSaveList();updateProfileDropdown();
-}
-function loadState(idx){
-  const s=getStates()[idx]; if(!s)return;
-  const sty=s.style||'hq';
-  currentStyle=sty;
-  document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
-  localStorage.setItem('lwStyle_'+(_currentUserId||'guest'), sty);
-  // Supabase: resources/cur_levels | lokal: res/cur
-  const res=s.resources||s.res||{};
-  const cur=s.cur_levels||s.cur||{};
-  RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k); if(el) el.value=res[k]||0;});
-  setCurLevels(cur);
-  BUILDINGS.forEach(b=>{const el=document.getElementById('ist_'+b.id); if(el) el.value=cur[b.id]||0;});
-  closeModal();
-}
-async async function deleteState(idx){
-  const states=getStates(); const entry=states[idx];
-  if(!entry)return;
-  if(_currentUserId && entry.id){
-    try{ await dbDeleteState(entry.id); }catch(e){}
-    try{ _statesCache=await dbLoadStates(_currentUserId); }catch(e){}
-  } else { states.splice(idx,1); setStates(states); }
-  renderSaveList(); updateProfileDropdown();
-}
-function renderSaveList(){updateProfileDropdown();
-  const states=getStates();const el=document.getElementById('saveList');
-  el.innerHTML=states.length?states.map((s,i)=>{
-    const dt=s.updated_at||s.date;
-    const dtStr=dt?new Date(dt).toLocaleString('de-DE'):'';
-    return `<div class="save-item"><div><div style="font-size:.82rem"><strong>${s.name}</strong></div><div class="meta">Stil: ${s.style||'—'} · ${dtStr}</div></div><div class="save-acts"><button class="btn-load" onclick="loadState(${i})">▶ Laden</button><button class="btn-del-save" onclick="deleteState(${i})">🗑</button></div></div>`;
-  }).join(''):'<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:.5rem">Keine Stände gespeichert</div>';
-}
-
 // ════ CSV ════
-function exportCSV(){
-  if(!lastResults.length){alert('Bitte zuerst berechnen!');return;}
-  const rows=[['Rang','Gebäude','Von Lv','Auf Lv','Typ','Nahrung','Eisen','Gold','Öl','Stein','Quarz','Score']];
-  [...lastResults].sort((a,b)=>b.score-a.score).forEach((r,i)=>rows.push([i+1,r.name,r.fromLv,r.toLv,r.type,r.cost.food,r.cost.iron,r.cost.gold,r.cost.oil,r.cost.stone,r.cost.quartz,r.score]));
-  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`LastWar_S4_${new Date().toISOString().slice(0,10)}.csv`;a.click();
-}
-
-// ════ QUICKSAVE & PROFIL-SYSTEM ════
-async function quickSave(){
-  const name=prompt('Profilname eingeben:','Stand '+new Date().toLocaleString('de-DE'));
-  if(!name)return;
-  const res=getRes(); const cur=getCurLevels();
-  if(_currentUserId){
-    try{
-      await dbSaveState(_currentUserId,name,currentStyle,res,cur);
-      _statesCache=await dbLoadStates(_currentUserId);
-    }catch(e){ alert('Fehler: '+e.message); return; }
-  } else {
-    const states=getStates();
-    const existIdx=states.findIndex(s=>s.name===name);
-    const entry={name,date:new Date().toISOString(),style:currentStyle,res,cur};
-    if(existIdx>=0){if(!confirm(`"${name}" überschreiben?`))return; states[existIdx]=entry;}
-    else{states.unshift(entry); if(states.length>50)states.pop();}
-    setStates(states);
-  }
-  updateProfileDropdown();
-  const ind=document.getElementById('savedIndicator');
-  ind.textContent='✅ '+name+' gespeichert'; ind.classList.add('show');
-  setTimeout(()=>{ ind.textContent='✅ Gespeichert'; ind.classList.remove('show'); },2500);
-}
-
-function updateProfileDropdown(){
-  const sel=document.getElementById('profileSelect');if(!sel)return;
-  const states=getStates();
-  sel.innerHTML='<option value="">– Profil laden –</option>'+
-    states.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
-}
-
-function loadProfile(idx){
-  if(idx==='')return;
-  loadState(parseInt(idx));
-  updateProfileDropdown();
-  document.getElementById('profileSelect').value='';
-}
-
-// JSON Export – kompletter Spielstand als Datei
-function exportJSON(){
-  const data={
-    version:'4.1',
-    exported:new Date().toISOString(),
-    profiles:getStates(),
-    autoSave:{res:getResCache(),cur:getCurLevels(),style:localStorage.getItem('lwStyle')||'hq'},
-    customDB:localStorage.getItem('lwDB_v41')||null
-  };
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`LastWar_Backup_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-}
-
-// JSON Import
-function importJSON(event){
-  const file=event.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const data=JSON.parse(e.target.result);
-      if(data.profiles)setStates(data.profiles);
-      if(data.autoSave){
-        if(data.autoSave.res)setResCache(data.autoSave.res);
-        if(data.autoSave.cur)setCurLevels(data.autoSave.cur);
-        if(data.autoSave.style)localStorage.setItem('lwStyle',data.autoSave.style);
-      }
-      if(data.customDB)localStorage.setItem('lwDB_v41',data.customDB);
-      // Reload UI
-      location.reload();
-    }catch(err){alert('Fehler beim Importieren: '+err.message);}
-  };
-  reader.readAsText(file);
-  event.target.value='';
-}
-
-// ════ SUPABASE AUTH INTEGRATION ════
-// Datenstruktur: { users:[{id,name,created}], activeUserId }
-// Pro User eigener Namespace in localStorage: lwRes_{id}, lwCur_{id}, lwStyle_{id}, lwStates_{id}
-
-// Auth via Supabase – keine lokale User-Key-Verwaltung nötig
-
-// Override Storage-Funktionen für User-Kontext
-// localStorage als lokaler Cache, Supabase als Quelle der Wahrheit
-let autoSaveTimer = null;
-let lastResults   = [];
-let lastCant      = [];
-let _istFilter    = 'all';
-let _currentUserId = null;
-let _currentProfile = null;
-
-function getCurLevels(){return JSON.parse(localStorage.getItem('lwCurLevels_'+(_currentUserId||'guest'))||'{}');}
-function setCurLevels(o){localStorage.setItem('lwCurLevels_'+(_currentUserId||'guest'),JSON.stringify(o));}
-function getResCache(){return JSON.parse(localStorage.getItem('lwResCache_'+(_currentUserId||'guest'))||'{}');}
-function setResCache(o){localStorage.setItem('lwResCache_'+(_currentUserId||'guest'),JSON.stringify(o));}
-// Stände kommen aus Supabase, localStorage nur als Offline-Fallback
-let _statesCache = [];
-function getStates(){return _statesCache;}
-function setStates(s){_statesCache=s;}
 
 
-
-// (Funktion durch Supabase Auth ersetzt)
-
-
-// (Funktion durch Supabase Auth ersetzt)
-
-
-// (Funktion durch Supabase Auth ersetzt)
-
-
-// (Funktion durch Supabase Auth ersetzt)
-
-
-// (Funktion durch Supabase Auth ersetzt)
-
-
-// (Funktion durch Supabase Auth ersetzt)
-
-
-// autoSave Style auch user-spezifisch speichern
-function autoSaveStyle(){localStorage.setItem('lwStyle_'+(_currentUserId||'guest'),currentStyle);}
-
-// ════ INIT ════
-(async function(){
-  // Theme
-  const theme = localStorage.getItem('lwTheme')||'dark';
-  darkMode = theme==='dark';
+// ═══ 13. INIT ═══════════════════════════════════════════════
+(async () => {
+  const theme = localStorage.getItem('lwTheme') ?? 'dark';
+  State.darkMode = theme === 'dark';
   document.documentElement.dataset.theme = theme;
-  document.getElementById('themeBtn').textContent = darkMode ? '🌙' : '☀️';
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = State.darkMode ? '🌙' : '☀️';
 
-  // ── Auth-Check ──
-  const session = await sbGetSession();
-  if(!session){
-    window.location.replace('index.html');
-    return;
-  }
-  _currentUserId = session.user.id;
-  _currentProfile = await sbGetProfile(_currentUserId);
+  // Auth-Check
+  const session = await Auth.getSession();
+  if (!session) { location.replace('index.html'); return; }
+  State.uid     = session.user.id;
+  State.profile = await Auth.getProfile(State.uid);
 
-  // ── User-Badge ──
-  const uname = _currentProfile?.username || session.user.email;
-  const avatar  = document.getElementById('userAvatar'); // FIXED: null-check folgt
-  const label   = document.getElementById('userLabel');
-  const roleEl  = document.getElementById('userRole');
-  const adminBtn= document.getElementById('adminBtn');
-  if(avatar)  avatar.textContent = uname.charAt(0).toUpperCase();
-  if(label)   label.textContent  = uname;
-  if(roleEl)  roleEl.textContent = _currentProfile?.role==='admin' ? '👑' : '';
-  if(adminBtn && _currentProfile?.role==='admin') adminBtn.style.display='inline-block';
+  // User-Badge
+  const uname = State.profile?.username ?? session.user.email;
+  [['userAvatar', uname.charAt(0).toUpperCase()],
+   ['userLabel',  uname],
+   ['userRole',   State.profile?.role === 'admin' ? '👑' : '']
+  ].forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.textContent = val; });
+  const adminBtn = document.getElementById('adminBtn');
+  if (adminBtn && State.profile?.role === 'admin') adminBtn.style.display = 'inline-block';
 
-  // ── AutoSave aus Supabase laden ──
-  let supabaseLoaded = false;
-  try{
-    const as = await dbLoadAutoSave(_currentUserId);
-    if(as){
-      const res = as.resources  || {};
-      const cur = as.cur_levels || {};
-      setResCache(res);
-      setCurLevels(cur);
-      RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k); if(el) el.value=res[k]||0;});
-      const sty = as.style || 'hq';
-      currentStyle = sty;
-      document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
-      supabaseLoaded = true;
+  // AutoSave aus Supabase laden
+  let loaded = false;
+  try {
+    const as = await DB.loadAutoSave();
+    if (as) {
+      const res = as.resources  ?? {};
+      const cur = as.cur_levels ?? {};
+      Storage.setResCache(res);
+      Storage.setCurLevels(cur);
+      RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if (el) el.value = res[k] ?? 0; });
+      State.currentStyle = as.style ?? 'hq';
+      loaded = true;
     }
-  }catch(e){ console.warn('AutoSave Supabase Fehler:', e.message); }
+  } catch (e) { console.warn('AutoSave:', e.message); }
 
-  // ── Fallback: localStorage ──
-  if(!supabaseLoaded){
-    const res = getResCache();
-    RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k); if(el&&res[k]!==undefined) el.value=res[k];});
-    const sty = localStorage.getItem('lwStyle_'+_currentUserId)||'hq';
-    currentStyle = sty;
-    document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
+  if (!loaded) {
+    const res = Storage.getResCache();
+    RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if (el && res[k] !== undefined) el.value = res[k]; });
+    State.currentStyle = localStorage.getItem(key('Style')) ?? 'hq';
   }
+  document.querySelectorAll('.sty-btn').forEach(b => b.classList.toggle('active', b.dataset.sty === State.currentStyle));
 
-  // ── Spielstände aus Supabase ──
-  try{ _statesCache = await dbLoadStates(_currentUserId); }
-  catch(e){ _statesCache = []; }
+  // Spielstände laden
+  try { State.statesCache = await DB.loadStates(); } catch { State.statesCache = []; }
 
-  // ── Ist-Stand einfüllen ──
+  // Ist-Stand rendern + befüllen
   renderIstTable();
-  const cur = getCurLevels();
-  BUILDINGS.forEach(b=>{
-    const el = document.getElementById('ist_'+b.id);
-    if(el && cur[b.id] !== undefined) el.value = cur[b.id];
+  const cur = Storage.getCurLevels();
+  BUILDINGS.forEach(b => {
+    const el = document.getElementById('ist_' + b.id);
+    if (el && cur[b.id] !== undefined) el.value = cur[b.id];
   });
 
   updateProfileDropdown();
 })();
-</script>
-
-<script>
-
-// ══════════════════════════════════════════
-// SUPABASE CONFIG + AUTH
-// ══════════════════════════════════════════
-const SUPABASE_URL  = 'https://pocwtsbryvxwzdoitxtb.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvY3d0c2JyeXZ4d3pkb2l0eHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjI2MjAsImV4cCI6MjA4OTMzODYyMH0.DNgPGFaQkDFTQf7BhtYsysyAvX5VpSBn4WdVmRa4LaU';
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-async function sbGetSession(){
-  try{
-    const { data, error } = await _sb.auth.getSession();
-    if(error) return null;
-    return data?.session || null;
-  }catch(e){ return null; }
-}
-
-async function sbGetProfile(userId){
-  try{
-    const { data } = await _sb.from('profiles').select('*').eq('id', userId).single();
-    return data || null;
-  }catch(e){ return null; }
-}
-
-async function sbLogin(email, password){
-  const { data, error } = await _sb.auth.signInWithPassword({ email, password });
-  if(error) throw error;
-  return data;
-}
-
-async function sbRegister(email, password, username){
-  const { data, error } = await _sb.auth.signUp({
-    email, password,
-    options: { data: { username } }
-  });
-  if(error) throw error;
-  return data;
-}
-
-async function sbLogout(){
-  try{ await _sb.auth.signOut(); }catch(e){}
-  localStorage.clear();
-  window.location.replace('index.html');
-}
-
-// ══ DB ══
-// ══════════════════════════════════════════════════
-// DB – Spielstände & AutoSave
-// ══════════════════════════════════════════════════
-
-async function dbAutoSave(userId, style, resources, curLevels){
-  await _sb.from('autosave').upsert({
-    user_id: userId, style,
-    resources, cur_levels: curLevels,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id' });
-}
-
-async function dbLoadAutoSave(userId){
-  const { data } = await _sb.from('autosave').select('*').eq('user_id', userId).single();
-  return data;
-}
-
-async function dbSaveState(userId, name, style, resources, curLevels){
-  // Prüfen ob Name bereits existiert → updaten
-  const { data: existing } = await _sb.from('game_states')
-    .select('id').eq('user_id', userId).eq('name', name).single();
-  if(existing){
-    await _sb.from('game_states').update({
-      style, resources, cur_levels: curLevels,
-      updated_at: new Date().toISOString()
-    }).eq('id', existing.id);
-    return existing.id;
-  }
-  const { data } = await _sb.from('game_states').insert({
-    user_id: userId, name, style,
-    resources, cur_levels: curLevels
-  }).select().single();
-  return data?.id;
-}
-
-async function dbLoadStates(userId){
-  const { data } = await _sb.from('game_states')
-    .select('*').eq('user_id', userId)
-    .order('updated_at', { ascending: false });
-  return data || [];
-}
-
-async function dbDeleteState(id){
-  await _sb.from('game_states').delete().eq('id', id);
-}
-
-// Admin: alle Nutzer + deren letzten AutoSave
-async function dbAdminLoadAll(){
-  const { data: profiles } = await _sb.from('profiles').select('*').order('created_at');
-  const { data: saves }    = await _sb.from('autosave').select('*');
-  const { data: states }   = await _sb.from('game_states').select('*').order('updated_at', { ascending: false });
-  return { profiles: profiles||[], saves: saves||[], states: states||[] };
-}
-
 </script>
 </body>
 </html>
