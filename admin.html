@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Last War – Admin</title>
+<style>
+[data-theme="dark"]{--bg:#0b0f14;--card:#13191f;--card2:#1a2230;--border:#2a3548;--text:#e6edf3;--muted:#7d8fa8;--inp:#0d1520;--hover:#1c2a3a}
+[data-theme="light"]{--bg:#f0f4f8;--card:#fff;--card2:#eef2f7;--border:#c8d6e5;--text:#1a2535;--muted:#6b7c93;--inp:#f8fafc;--hover:#e8f0fb}
+:root{--accent:#f0a500;--green:#2ea043;--red:#cf222e;--blue:#0969da;--purple:#8250df}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+nav{background:var(--card);border-bottom:2px solid var(--accent);display:flex;align-items:center;
+  justify-content:space-between;padding:.55rem 1.1rem;position:sticky;top:0;z-index:100}
+.nav-l{display:flex;align-items:center;gap:.6rem}
+.nav-title{font-size:.95rem;font-weight:700;color:var(--accent)}
+.nav-title small{display:block;font-size:.62rem;color:var(--muted);font-weight:400}
+.btn-nav{padding:.28rem .65rem;border-radius:7px;border:1px solid var(--border);background:var(--card2);
+  color:var(--text);font-size:.73rem;cursor:pointer;white-space:nowrap}
+.btn-nav:hover{border-color:var(--accent);color:var(--accent)}
+.main{max-width:1200px;margin:0 auto;padding:1.2rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:.8rem}
+.card-title{font-size:.74rem;text-transform:uppercase;letter-spacing:.7px;color:var(--accent);
+  margin-bottom:.8rem;font-weight:700}
+.stats{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:.7rem 1.1rem;text-align:center;flex:1;min-width:100px}
+.stat-num{font-size:1.6rem;font-weight:800;color:var(--accent)}
+.stat-lbl{font-size:.68rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{padding:.42rem .55rem;text-align:left;color:var(--muted);font-weight:700;
+  border-bottom:1px solid var(--border);white-space:nowrap;background:var(--card)}
+td{padding:.38rem .52rem;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--hover)}
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border);max-height:450px;overflow-y:auto}
+.tag{display:inline-block;padding:.05rem .38rem;border-radius:99px;font-size:.66rem;font-weight:700}
+.tag-admin{background:#2d1040;color:#ce93d8}
+.tag-user{background:#0d1e3a;color:#60a5fa}
+.badge-ok{color:var(--green);font-weight:700}
+.badge-no{color:var(--muted)}
+.btn-promote{background:var(--purple);color:#fff;border:none;border-radius:5px;
+  padding:.18rem .45rem;font-size:.7rem;cursor:pointer}
+.btn-demote{background:var(--card2);color:var(--muted);border:1px solid var(--border);border-radius:5px;
+  padding:.18rem .45rem;font-size:.7rem;cursor:pointer}
+.btn-view{background:var(--blue);color:#fff;border:none;border-radius:5px;
+  padding:.18rem .45rem;font-size:.7rem;cursor:pointer}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:300;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:1.3rem;width:min(600px,95vw);max-height:88vh;overflow-y:auto}
+.modal h3{color:var(--accent);margin-bottom:1rem;font-size:.95rem;font-weight:800}
+.modal-close{float:right;background:transparent;border:none;color:var(--muted);
+  font-size:1.1rem;cursor:pointer;margin-top:-.2rem}
+.res-chip{display:inline-block;background:var(--card2);border-radius:4px;
+  padding:.03rem .28rem;font-size:.7rem;margin:.1rem .08rem}
+.loading{text-align:center;padding:2rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-l">
+    <span style="font-size:1.4rem">👑</span>
+    <div class="nav-title">Admin-Dashboard – Last War Upgrade-Planer
+      <small>Nur für Administratoren sichtbar</small>
+    </div>
+  </div>
+  <div style="display:flex;gap:.4rem">
+    <button class="btn-nav" onclick="window.location.href='app.html'">⬅️ Zur App</button>
+    <button class="btn-nav" onclick="loadAll()">🔄 Aktualisieren</button>
+    <button class="btn-nav" onclick="doLogout()" style="color:#f87171;border-color:#f87171">🚪 Logout</button>
+  </div>
+</nav>
+
+<div class="main">
+  <div id="loadingMsg" class="loading">⏳ Lade Daten…</div>
+  <div id="content" style="display:none">
+    <!-- STATISTIKEN -->
+    <div class="stats" id="statsRow"></div>
+
+    <!-- NUTZERÜBERSICHT -->
+    <div class="card">
+      <div class="card-title">👥 Alle registrierten Nutzer</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Nutzer</th><th>E-Mail</th><th>Rolle</th><th>Registriert</th>
+            <th>Letzter AutoSave</th><th>Stände</th><th>Aktionen</th>
+          </tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ALLE SPIELSTÄNDE -->
+    <div class="card">
+      <div class="card-title">💾 Alle Spielstände (alle Nutzer)</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Nutzer</th><th>Profilname</th><th>Spielstil</th><th>Rohstoffe</th><th>Gespeichert</th><th>Aktionen</th>
+          </tr></thead>
+          <tbody id="statesBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL-MODAL -->
+<div class="overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDetail()">✕</button>
+    <h3 id="detailTitle">Spielstand Details</h3>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/db.js"></script>
+<script>
+const RES_ICO={food:'🌾',iron:'⚙️',gold:'💰',oil:'🔩',stone:'🪨',quartz:'💎'};
+let _allData=null;
+let _adminProfile=null;
+
+async function init(){
+  const result = await requireAdmin();
+  if(!result)return;
+  _adminProfile=result.profile;
+  await loadAll();
+}
+
+async function loadAll(){
+  document.getElementById('loadingMsg').style.display='block';
+  document.getElementById('content').style.display='none';
+  try{
+    _allData = await dbAdminLoadAll();
+    renderStats();renderUsers();renderStates();
+    document.getElementById('loadingMsg').style.display='none';
+    document.getElementById('content').style.display='block';
+  }catch(e){
+    document.getElementById('loadingMsg').textContent='❌ Fehler: '+e.message;
+  }
+}
+
+function renderStats(){
+  const {profiles,saves,states}=_allData;
+  const admins=profiles.filter(p=>p.role==='admin').length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-box"><div class="stat-num">${profiles.length}</div><div class="stat-lbl">Registrierte Nutzer</div></div>
+    <div class="stat-box"><div class="stat-num">${admins}</div><div class="stat-lbl">Admins</div></div>
+    <div class="stat-box"><div class="stat-num">${states.length}</div><div class="stat-lbl">Gespeicherte Stände</div></div>
+    <div class="stat-box"><div class="stat-num">${saves.length}</div><div class="stat-lbl">AutoSaves aktiv</div></div>`;
+}
+
+function renderUsers(){
+  const {profiles,saves,states}=_allData;
+  document.getElementById('usersBody').innerHTML=profiles.map(p=>{
+    const save=saves.find(s=>s.user_id===p.id);
+    const uStates=states.filter(s=>s.user_id===p.id);
+    const lastSave=save?new Date(save.updated_at).toLocaleString('de-DE'):'–';
+    const isMe=p.id===_adminProfile?.id;
+    return `<tr>
+      <td><strong>${p.username}</strong>${isMe?' <span style="font-size:.65rem;color:var(--green)">(Du)</span>':''}</td>
+      <td style="font-size:.75rem;color:var(--muted)">–</td>
+      <td><span class="tag ${p.role==='admin'?'tag-admin':'tag-user'}">${p.role==='admin'?'👑 Admin':'👤 User'}</span></td>
+      <td style="font-size:.75rem;color:var(--muted)">${new Date(p.created_at).toLocaleDateString('de-DE')}</td>
+      <td style="font-size:.75rem">${lastSave}</td>
+      <td style="font-size:.75rem;color:var(--accent);font-weight:700">${uStates.length}</td>
+      <td>
+        <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+          ${!isMe?(p.role==='admin'
+            ?`<button class="btn-demote" onclick="setRole('${p.id}','user')">↓ User</button>`
+            :`<button class="btn-promote" onclick="setRole('${p.id}','admin')">↑ Admin</button>`
+          ):''}
+          ${save?`<button class="btn-view" onclick="viewAutoSave('${p.id}','${p.username}')">👁 AutoSave</button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderStates(){
+  const {profiles,states}=_allData;
+  document.getElementById('statesBody').innerHTML=states.map(s=>{
+    const p=profiles.find(x=>x.id===s.user_id);
+    const uname=p?p.username:'Unbekannt';
+    const resHtml=Object.entries(s.resources||{})
+      .filter(([k,v])=>parseFloat(v)>0)
+      .map(([k,v])=>`<span class="res-chip">${RES_ICO[k]||''}${v}M</span>`).join('');
+    return `<tr>
+      <td><strong>${uname}</strong></td>
+      <td>${s.name}</td>
+      <td style="font-size:.75rem">${s.style||'–'}</td>
+      <td style="white-space:normal">${resHtml||'–'}</td>
+      <td style="font-size:.75rem;color:var(--muted)">${new Date(s.updated_at).toLocaleString('de-DE')}</td>
+      <td><button class="btn-view" onclick="viewState(${states.indexOf(s)})">👁 Details</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function setRole(userId, role){
+  if(!confirm(`Rolle auf "${role}" setzen?`))return;
+  const {error}=await _sb.from('profiles').update({role}).eq('id',userId);
+  if(error){alert('Fehler: '+error.message);return;}
+  await loadAll();
+}
+
+function viewAutoSave(userId, username){
+  const save=_allData.saves.find(s=>s.user_id===userId);
+  if(!save)return;
+  showDetail('AutoSave: '+username, save);
+}
+
+function viewState(idx){
+  const s=_allData.states[idx];
+  const p=_allData.profiles.find(x=>x.id===s.user_id);
+  showDetail((p?.username||'?')+' – '+s.name, s);
+}
+
+function showDetail(title, data){
+  document.getElementById('detailTitle').textContent=title;
+  const cur=data.cur_levels||{};
+  const res=data.resources||{};
+  const resHtml=Object.entries(res).filter(([k,v])=>parseFloat(v)>0)
+    .map(([k,v])=>`<span class="res-chip" style="font-size:.8rem">${RES_ICO[k]||k} <strong>${v}M</strong></span>`).join(' ');
+  const curHtml=Object.entries(cur).filter(([k,v])=>parseInt(v)>0)
+    .map(([k,v])=>`<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:.25rem 0;font-size:.8rem"><span>${k}</span><strong>Lv.${v}</strong></div>`).join('');
+  document.getElementById('detailContent').innerHTML=`
+    <div style="margin-bottom:.8rem">
+      <div style="font-size:.74rem;text-transform:uppercase;color:var(--accent);margin-bottom:.4rem">Rohstoffe</div>
+      <div>${resHtml||'–'}</div>
+    </div>
+    <div>
+      <div style="font-size:.74rem;text-transform:uppercase;color:var(--accent);margin-bottom:.4rem">Gebäudelevel (${Object.values(cur).filter(v=>parseInt(v)>0).length} Einträge)</div>
+      <div style="max-height:300px;overflow-y:auto">${curHtml||'–'}</div>
+    </div>`;
+  document.getElementById('detailOverlay').classList.add('show');
+}
+function closeDetail(){document.getElementById('detailOverlay').classList.remove('show');}
+
+async function doLogout(){await logout();}
+
+init();
+</script>
+</body>
+</html>

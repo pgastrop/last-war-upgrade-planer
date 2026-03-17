@@ -1,30 +1,31 @@
-# 🏚️ Last War: Bau-Planer v3
+# 🌑 Last War – Upgrade-Planer v5.0
 
-Eine kostenlose Offline-Web-App für **Last War: Survival** – optimiert für Season 1–4.
+Multi-User Web-App mit Supabase Auth · Season 4 · Level 1–35
 
-## ✨ Features
-- 🔍 **Bau-Planer**: Rohstoffe eingeben → alle baubaren Gebäude mit Prioritäts-Ranking
-- 📈 **Fortschritts-Tracker**: Aktuellen Gebäude-Level verfolgen
-- ✏️ **Kostentabelle-Editor**: Alle Kosten direkt in der App bearbeiten
-- 🗓️ **Season-Verwaltung**: Season 1–4 umschaltbar
-- 💾 **Offline & localStorage**: Kein Server nötig, alles im Browser gespeichert
-- 🌙 **Dark / Light Mode**
-- 📤 **CSV-Export**
+## Setup
 
-## 🚀 Live-URL
-👉 [last-war-planer.vercel.app](https://last-war-planer.vercel.app)
+### 1. Supabase
+1. [supabase.com](https://supabase.com) → Projekt öffnen
+2. **SQL Editor** → Inhalt von `supabase_setup.sql` einfügen → Run
+3. **Project Settings → API** → URL + anon key kopieren
+4. In `js/config.js` eintragen
 
-## 🛠️ Lokale Nutzung
-Einfach `index.html` herunterladen und im Browser öffnen – fertig.
-
-## 📦 Deployment (Vercel)
-```bash
-npm install -g vercel
-vercel
+### 2. Ersten Admin setzen
+Nach erster Registrierung im Supabase SQL Editor:
+```sql
+update public.profiles set role = 'admin' where username = 'DEIN_USERNAME';
 ```
 
-## 📊 Datenquellen
-Kostendaten basieren auf Community-Daten von cpt-hedge.com und lastwartutorial.com.
+### 3. Deployment
+```bash
+cd C:\lws
+xcopy /E /I /Y lws_v5\* .
+git add .
+git commit -m "v5.0: Supabase Auth, Multi-User, Admin-Dashboard"
+git push
+```
 
-## 📝 Lizenz
-MIT – frei nutzbar und anpassbar.
+## URLs
+- `/` → Login / Registrierung
+- `/app.html` → Upgrade-Planer (nur eingeloggt)
+- `/admin.html` → Admin-Dashboard (nur Admins)

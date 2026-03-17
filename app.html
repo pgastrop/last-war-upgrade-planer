@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Last War S4 – Upgrade-Planer v5.0</title>
+<style>
+[data-theme="dark"]{--bg:#0b0f14;--card:#13191f;--card2:#1a2230;--border:#2a3548;--text:#e6edf3;--muted:#7d8fa8;--inp:#0d1520;--hover:#1c2a3a;--modal-bg:rgba(0,0,0,.75)}
+[data-theme="light"]{--bg:#f0f4f8;--card:#ffffff;--card2:#eef2f7;--border:#c8d6e5;--text:#1a2535;--muted:#6b7c93;--inp:#f8fafc;--hover:#e8f0fb;--modal-bg:rgba(0,0,0,.4)}
+:root{--accent:#f0a500;--green:#2ea043;--red:#cf222e;--blue:#0969da;--purple:#8250df}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+nav{background:var(--card);border-bottom:2px solid var(--accent);display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;position:sticky;top:0;z-index:100;gap:.5rem;flex-wrap:wrap}
+.nav-l{display:flex;align-items:center;gap:.6rem}
+.nav-title{font-size:.95rem;font-weight:700;color:var(--accent);line-height:1.2}
+.nav-title small{display:block;font-size:.62rem;color:var(--muted);font-weight:400}
+.nav-r{display:flex;gap:.35rem;align-items:center;flex-wrap:wrap}
+.btn-nav{padding:.28rem .65rem;border-radius:7px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:.73rem;cursor:pointer;white-space:nowrap;transition:border .15s,color .15s}
+.btn-nav:hover{border-color:var(--accent);color:var(--accent)}
+.theme-btn{font-size:1rem;padding:.25rem .5rem;border-radius:7px;border:1px solid var(--border);background:var(--card2);cursor:pointer}
+.main-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--card);padding:0 1rem;position:sticky;top:52px;z-index:90}
+.m-tab{padding:.52rem 1.1rem;font-size:.82rem;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);background:transparent;border-top:none;border-left:none;border-right:none;transition:all .15s}
+.m-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none;max-width:1200px;margin:0 auto;padding:1rem}
+.tab-panel.active{display:block}
+.layout2{display:grid;grid-template-columns:340px 1fr;gap:1rem}
+@media(max-width:760px){.layout2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:.8rem}
+.card-title{font-size:.74rem;text-transform:uppercase;letter-spacing:.7px;color:var(--accent);margin-bottom:.8rem;display:flex;align-items:center;gap:.4rem;font-weight:700}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-bottom:.5rem}
+.res-box{background:var(--inp);border:1px solid var(--border);border-radius:8px;padding:.42rem .52rem;display:flex;align-items:center;gap:.35rem;transition:border .15s}
+.res-box:focus-within{border-color:var(--accent)}
+.res-box .ico{font-size:.95rem;width:18px;text-align:center;flex-shrink:0}
+.res-box-inner{display:flex;flex-direction:column;flex:1;min-width:0}
+.res-box-inner span{font-size:.64rem;color:var(--muted);line-height:1.3}
+.res-box-inner input{background:transparent;border:none;outline:none;color:var(--text);font-size:.88rem;font-weight:700;width:100%}
+.sty-btns{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.72rem}
+.sty-btn{padding:.25rem .62rem;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.73rem;cursor:pointer;transition:all .15s}
+.sty-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.btn-calc{width:100%;padding:.6rem;background:var(--accent);color:#000;font-weight:800;font-size:.92rem;border:none;border-radius:9px;cursor:pointer}
+.btn-calc:hover{opacity:.85}
+.auto-save-hint{font-size:.68rem;color:var(--muted);text-align:center;margin-top:.4rem}
+.ist-filter{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.6rem}
+.if-btn{padding:.22rem .58rem;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.72rem;cursor:pointer;transition:all .15s}
+.if-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+.ist-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.ist-table th{padding:.35rem .45rem;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);font-size:.72rem;text-transform:uppercase}
+.ist-table td{padding:.28rem .4rem;border-bottom:1px solid var(--border)}
+.ist-table tr:last-child td{border-bottom:none}
+.lv-inp{width:58px;background:var(--inp);border:1px solid var(--border);border-radius:6px;padding:.22rem .35rem;color:var(--text);font-size:.82rem;text-align:center;outline:none;transition:border .15s}
+.lv-inp:focus{border-color:var(--accent)}
+.tag{display:inline-block;padding:.05rem .38rem;border-radius:99px;font-size:.66rem;font-weight:700}
+.tag-hq{background:#0d1e3a;color:#60a5fa}
+.tag-mil{background:#1e0a2a;color:#c084fc}
+.tag-eco{background:#0d2a18;color:#4ade80}
+.tag-def{background:#2d2810;color:#e3b341}
+.tag-s4{background:#2d1040;color:#ce93d8}
+[data-theme="light"] .tag-hq{background:#dbeafe;color:var(--blue)}
+[data-theme="light"] .tag-mil{background:#f3e8ff;color:var(--purple)}
+[data-theme="light"] .tag-eco{background:#dcfce7;color:var(--green)}
+[data-theme="light"] .tag-def{background:#fef9c3;color:#92400e}
+[data-theme="light"] .tag-s4{background:#f3e8ff;color:var(--purple)}
+.reset-lv{background:transparent;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;padding:0 .2rem}
+.reset-lv:hover{color:var(--red)}
+.lv-max-hint{font-size:.68rem;color:var(--muted)}
+.s4-banner{background:linear-gradient(90deg,var(--card2),var(--card));border:1px solid var(--purple);border-radius:9px;padding:.55rem .9rem;font-size:.78rem;font-weight:700;color:#ce93d8;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.res-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-bottom:.55rem}
+.sort-grp{display:flex;gap:.3rem}
+.sort-btn{padding:.2rem .52rem;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.7rem;cursor:pointer;transition:all .15s}
+.sort-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+.stats-bar{font-size:.76rem;color:var(--muted);margin-bottom:.6rem;display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
+.stats-bar .ok{color:var(--green);font-weight:700}
+.stats-bar .no{color:var(--red);font-weight:700}
+.tbl-wrap{overflow-x:auto;max-height:600px;overflow-y:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{padding:.42rem .55rem;text-align:left;color:var(--muted);font-weight:700;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);white-space:nowrap}
+td{padding:.38rem .52rem;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--hover)}
+.rk{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-weight:800;font-size:.7rem}
+.rk1{background:gold;color:#000}.rk2{background:silver;color:#000}.rk3{background:#cd7f32;color:#fff}.rko{background:var(--card2);color:var(--muted)}
+.chip{display:inline-block;background:var(--card2);border-radius:4px;padding:.03rem .26rem;font-size:.68rem;color:var(--text);margin-right:.12rem;white-space:nowrap}
+.chip.warn{background:#3a1a1a;color:#f87171}
+.bar-bg{background:var(--card2);border-radius:99px;height:5px;flex:1;min-width:40px}
+.bar-fill{height:5px;border-radius:99px}
+.upgrade-arrow{color:var(--muted);font-size:.75rem}
+.upgrade-new{font-weight:700;color:var(--green);font-size:.75rem}
+.empty-s{text-align:center;padding:2.5rem;color:var(--muted)}
+#start-hint{text-align:center;padding:2.5rem;color:var(--muted)}
+.saved-indicator{font-size:.68rem;color:var(--green);display:none}
+.saved-indicator.show{display:inline}
+/* TRACKER */
+.prog-summary{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.8rem}
+.prog-sum-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.55rem .9rem;text-align:center;flex:1;min-width:80px}
+.prog-sum-box .num{font-size:1.5rem;font-weight:800;color:var(--accent)}
+.prog-sum-box .lbl{font-size:.68rem;color:var(--muted)}
+.prog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.65rem}
+.prog-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.8rem}
+.prog-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.prog-card-name{font-size:.83rem;font-weight:700}
+.prog-bar-wrap{display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem}
+.prog-bar-bg{flex:1;background:var(--card2);border-radius:99px;height:7px}
+.prog-bar-fill{height:7px;border-radius:99px;background:var(--accent);transition:width .5s}
+.prog-pct{font-size:.7rem;color:var(--muted);width:30px;text-align:right}
+.prog-lv{font-size:.72rem;color:var(--muted)}
+.prog-actions{display:flex;gap:.3rem;margin-top:.45rem;flex-wrap:wrap}
+.btn-lv{padding:.2rem .48rem;border-radius:6px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:.7rem;cursor:pointer;transition:all .15s}
+.btn-lv.up{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-lv.down{border-color:var(--red);color:var(--red)}
+.btn-lv:hover{opacity:.8}
+.btn-lv:disabled{opacity:.3;cursor:default}
+.prog-filter{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.8rem}
+.pf-btn{padding:.23rem .62rem;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.73rem;cursor:pointer;transition:all .15s}
+.pf-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+/* EDITOR */
+.editor-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem;flex-wrap:wrap;gap:.5rem}
+.edit-tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border);max-height:580px;overflow-y:auto}
+.edit-tbl{width:100%;border-collapse:collapse;font-size:.77rem}
+.edit-tbl th{padding:.38rem .5rem;text-align:left;color:var(--muted);font-weight:700;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card)}
+.edit-tbl td{padding:.3rem .4rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.edit-tbl tr:hover td{background:var(--hover)}
+.cell-inp{width:70px;background:var(--inp);border:1px solid transparent;border-radius:5px;padding:.18rem .3rem;color:var(--text);font-size:.75rem;text-align:right;outline:none;transition:border .15s}
+.cell-inp:focus{border-color:var(--accent)}
+.btn-add-row{padding:.3rem .7rem;border-radius:7px;border:1px solid var(--green);background:transparent;color:var(--green);font-size:.75rem;cursor:pointer;margin-top:.5rem}
+.btn-del-row{background:transparent;border:none;color:var(--red);font-size:.8rem;cursor:pointer}
+.btn-save-db{padding:.33rem .85rem;border-radius:7px;background:var(--accent);color:#000;font-weight:700;border:none;font-size:.8rem;cursor:pointer}
+.btn-reset-db{padding:.33rem .85rem;border-radius:7px;background:transparent;color:var(--muted);border:1px solid var(--border);font-size:.8rem;cursor:pointer}
+.ef-btn{padding:.22rem .58rem;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.72rem;cursor:pointer;transition:all .15s}
+.ef-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+/* USER */
+.user-badge{display:flex;align-items:center;gap:.32rem;background:var(--card2);
+  border:1px solid var(--border);border-radius:8px;padding:.22rem .55rem;
+  font-size:.75rem;cursor:pointer;transition:border .15s}
+.user-badge:hover{border-color:var(--accent)}
+.user-avatar{width:22px;height:22px;border-radius:50%;background:var(--accent);
+  color:#000;display:flex;align-items:center;justify-content:center;
+  font-size:.65rem;font-weight:800;flex-shrink:0}
+.user-modal{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:1.3rem;width:min(420px,95vw);max-height:88vh;overflow-y:auto}
+.user-list{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.8rem}
+.user-item{background:var(--card2);border:2px solid var(--border);border-radius:9px;
+  padding:.55rem .75rem;display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;transition:border .15s}
+.user-item:hover{border-color:var(--accent)}
+.user-item.active-user{border-color:var(--accent);background:var(--hover)}
+.user-item .u-name{font-weight:700;font-size:.85rem}
+.user-item .u-meta{font-size:.68rem;color:var(--muted);margin-top:.1rem}
+.user-acts{display:flex;gap:.3rem}
+.btn-switch{background:var(--accent);color:#000;border:none;border-radius:6px;
+  padding:.2rem .52rem;font-size:.7rem;cursor:pointer;font-weight:700}
+.btn-del-user{background:var(--red);color:#fff;border:none;border-radius:6px;
+  padding:.2rem .45rem;font-size:.7rem;cursor:pointer}
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:var(--modal-bg);z-index:300;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.3rem;width:min(480px,95vw);max-height:88vh;overflow-y:auto}
+.modal h3{color:var(--accent);margin-bottom:1rem;font-size:.95rem;font-weight:800}
+.save-list{display:flex;flex-direction:column;gap:.42rem;margin-bottom:.75rem}
+.save-item{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.52rem .72rem;display:flex;align-items:center;justify-content:space-between}
+.save-item .meta{color:var(--muted);font-size:.7rem;margin-top:.1rem}
+.save-acts{display:flex;gap:.32rem}
+.btn-load{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:.2rem .52rem;font-size:.7rem;cursor:pointer;font-weight:700}
+.btn-del-save{background:var(--red);color:#fff;border:none;border-radius:6px;padding:.2rem .52rem;font-size:.7rem;cursor:pointer}
+.inp-name{width:100%;background:var(--inp);border:1px solid var(--border);border-radius:7px;padding:.38rem .62rem;color:var(--text);font-size:.82rem;outline:none;margin-bottom:.5rem;transition:border .15s}
+.inp-name:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:.42rem}
+.btn-modal-save{flex:1;padding:.46rem;background:var(--accent);color:#000;font-weight:800;border:none;border-radius:8px;cursor:pointer;font-size:.83rem}
+.btn-modal-close{padding:.46rem .9rem;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:.83rem}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-l">
+    <span style="font-size:1.5rem">🌑</span>
+    <div class="nav-title">Last War – Upgrade-Planer Season 4
+      <small>Verifizierte Daten (cpt-hedge.com) · Level 1–35 · Öl inkl.</small>
+    </div>
+  </div>
+  <div class="nav-r">
+    <span class="saved-indicator" id="savedIndicator">✅ Gespeichert</span>
+    <div class="user-badge" title="Eingeloggt als">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <span id="userLabel" style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">…</span>
+      <span id="userRole" style="font-size:.62rem;color:var(--muted)"></span>
+    </div>
+    <button class="btn-nav" id="adminBtn" style="display:none" onclick="window.location.href='admin.html'">👑 Admin</button>
+    <button class="btn-nav" onclick="doLogout()" style="color:#f87171;border-color:#f87171">🚪 Logout</button>
+    <select id="profileSelect" onchange="loadProfile(this.value)"
+      style="background:var(--inp);border:1px solid var(--border);border-radius:7px;
+      padding:.28rem .52rem;color:var(--text);font-size:.73rem;outline:none;max-width:160px">
+      <option value="">– Profil laden –</option>
+    </select>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+    <button class="btn-nav" onclick="openModal()">💾 Stände</button>
+    <button class="btn-nav" onclick="exportJSON()">📤 Export</button>
+    <button class="btn-nav" onclick="document.getElementById('importFile').click()">📥 Import</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)"/>
+    <button class="btn-nav" onclick="exportCSV()">🗒️ CSV</button>
+  </div>
+</nav>
+<div class="main-tabs">
+  <button class="m-tab active" onclick="showTab('planner',this)">🔍 Upgrade-Planer</button>
+  <button class="m-tab" onclick="showTab('tracker',this)">📈 Fortschritt</button>
+  <button class="m-tab" onclick="showTab('editor',this)">✏️ Kostentabelle</button>
+</div>
+
+<!-- TAB 1 PLANNER -->
+<div id="tab-planner" class="tab-panel active">
+  <div class="layout2">
+    <div>
+      <div class="card">
+        <div class="card-title">🎒 Verfügbare Rohstoffe <span style="font-weight:400;text-transform:none;font-size:.68rem;color:var(--muted)">(Millionen)</span></div>
+        <div class="res-grid">
+          <div class="res-box"><span class="ico">🌾</span><div class="res-box-inner"><span>Nahrung</span><input type="number" id="r_food" min="0" step="1" value="0" oninput="autoSave()"/></div><span style="font-size:.65rem;color:var(--muted)">M</span></div>
+          <div class="res-box"><span class="ico">⚙️</span><div class="res-box-inner"><span>Eisen</span><input type="number" id="r_iron" min="0" step="1" value="0" oninput="autoSave()"/></div><span style="font-size:.65rem;color:var(--muted)">M</span></div>
+          <div class="res-box"><span class="ico">💰</span><div class="res-box-inner"><span>Gold</span><input type="number" id="r_gold" min="0" step="1" value="0" oninput="autoSave()"/></div><span style="font-size:.65rem;color:var(--muted)">M</span></div>
+          <div class="res-box"><span class="ico">🔩</span><div class="res-box-inner"><span>Öl</span><input type="number" id="r_oil" min="0" step="1" value="0" oninput="autoSave()"/></div><span style="font-size:.65rem;color:var(--muted)">M</span></div>
+          <div class="res-box"><span class="ico">🪨</span><div class="res-box-inner"><span>Stein</span><input type="number" id="r_stone" min="0" step="1" value="0" oninput="autoSave()"/></div><span style="font-size:.65rem;color:var(--muted)">M</span></div>
+          <div class="res-box"><span class="ico">💎</span><div class="res-box-inner"><span>Quarz</span><input type="number" id="r_quartz" min="0" step="1" value="0" oninput="autoSave()"/></div><span style="font-size:.65rem;color:var(--muted)">M</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚙️ Spielstil</div>
+        <div class="sty-btns" id="styleBtns">
+          <button class="sty-btn active" data-sty="hq">🏰 HQ-Rush</button>
+          <button class="sty-btn" data-sty="balanced">⚖️ Balanced</button>
+          <button class="sty-btn" data-sty="eco">🌱 Eco</button>
+          <button class="sty-btn" data-sty="mil">⚔️ Militär</button>
+          <button class="sty-btn" data-sty="s4">🌑 S4-Fokus</button>
+        </div>
+        <button class="btn-calc" onclick="calculate()">🔍 Mögliche Upgrades berechnen</button>
+        <div style="display:flex;gap:.4rem;margin-top:.5rem">
+          <button class="btn-calc" style="background:var(--card2);color:var(--accent);border:1px solid var(--accent);flex:1;font-size:.8rem;padding:.45rem"
+            onclick="quickSave()">💾 Stand speichern</button>
+          <button class="btn-calc" style="background:var(--card2);color:var(--muted);border:1px solid var(--border);flex:1;font-size:.8rem;padding:.45rem"
+            onclick="openModal()">📂 Stände verwalten</button>
+        </div>
+        <div class="auto-save-hint" style="margin-top:.35rem">🔄 Auto-Speicherung aktiv · Daten bleiben beim nächsten Besuch erhalten</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏗️ Ist-Stand: Aktuelle Gebäudelevel</div>
+        <div style="background:var(--card2);border:1px solid var(--accent);border-radius:8px;
+          padding:.52rem .72rem;margin-bottom:.65rem;font-size:.75rem;line-height:1.6">
+          <strong style="color:var(--accent)">💡 Hinweis: Mehrere Gebäude gleicher Art</strong><br>
+          Hast du z.B. <strong>3 Kasernen</strong> auf Level 22, 24 und 25, trage immer den
+          <strong style="color:var(--green)">niedrigsten Level (22)</strong> ein.<br>
+          Die App zeigt dann das Upgrade auf den nächsten Level – die höheren Kasernen
+          sind bereits weiter und werden separat verwaltet.
+          <span style="color:var(--muted)">→ Jedes Gebäude in der Liste = eine Instanz.</span>
+        </div>
+        <div class="ist-filter">
+          <button class="if-btn active" data-if="all" onclick="setIstFilter('all',this)">Alle</button>
+          <button class="if-btn" data-if="hq" onclick="setIstFilter('hq',this)">HQ/Kern</button>
+          <button class="if-btn" data-if="mil" onclick="setIstFilter('mil',this)">Militär</button>
+          <button class="if-btn" data-if="eco" onclick="setIstFilter('eco',this)">Ressource</button>
+          <button class="if-btn" data-if="s4" onclick="setIstFilter('s4',this)">Season 4</button>
+        </div>
+        <table class="ist-table">
+          <thead><tr><th>Gebäude</th><th>Typ</th><th>Akt.Lv</th><th>Max</th><th></th></tr></thead>
+          <tbody id="istBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="rightPanel">
+      <div id="start-hint"><div style="font-size:2.5rem">⬅️</div><div style="margin-top:.5rem">Ist-Stand &amp; Rohstoffe eingeben, dann<br><strong style="color:var(--accent)">„Mögliche Upgrades berechnen"</strong> klicken</div></div>
+      <div id="resultSection" style="display:none">
+        <div class="s4-banner">🌑 <strong>Season 4 – Evernight Isle</strong> &nbsp;· Nur nächste finanzierbare Upgrades · Daten: cpt-hedge.com</div>
+        <div class="card">
+          <div class="res-hdr">
+            <div class="card-title" style="margin:0">✅ Jetzt upgradebar</div>
+            <div class="sort-grp">
+              <button class="sort-btn active" onclick="sortBy('score',this)">⭐ Score</button>
+              <button class="sort-btn" onclick="sortBy('cost',this)">💰 Kosten</button>
+              <button class="sort-btn" onclick="sortBy('name',this)">🔤 Name</button>
+            </div>
+          </div>
+          <div class="stats-bar" id="statsBar"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Gebäude</th><th>Upgrade</th><th>Typ</th><th>Kosten (M)</th><th>Score</th></tr></thead>
+              <tbody id="resultBody"></tbody>
+            </table>
+          </div>
+          <div id="emptyState" class="empty-s" style="display:none"><div style="font-size:2rem">💸</div><div style="margin-top:.4rem">Keine Upgrades mit diesen Rohstoffen möglich.</div></div>
+        </div>
+        <div class="card" id="cantSection" style="display:none">
+          <div class="card-title" style="color:var(--red)">🚫 Nächste Upgrades – noch nicht finanzierbar</div>
+          <div class="stats-bar" id="cantStats"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Gebäude</th><th>Upgrade</th><th>Typ</th><th>Kosten (M)</th><th>Fehlende Ressourcen</th></tr></thead>
+              <tbody id="cantBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2 TRACKER -->
+<div id="tab-tracker" class="tab-panel">
+  <div class="prog-summary" id="progSummary"></div>
+  <div class="prog-filter">
+    <button class="pf-btn active" data-pf="all" onclick="setPF('all',this)">Alle</button>
+    <button class="pf-btn" data-pf="hq" onclick="setPF('hq',this)">HQ/Kern</button>
+    <button class="pf-btn" data-pf="mil" onclick="setPF('mil',this)">Militär</button>
+    <button class="pf-btn" data-pf="eco" onclick="setPF('eco',this)">Ressource</button>
+    <button class="pf-btn" data-pf="s4" onclick="setPF('s4',this)">Season 4</button>
+  </div>
+  <div class="prog-grid" id="progGrid"></div>
+</div>
+
+<!-- TAB 3 EDITOR -->
+<div id="tab-editor" class="tab-panel">
+  <div class="editor-hdr">
+    <div>
+      <div class="card-title" style="margin:0">✏️ Kostentabelle (verifizierte Daten: cpt-hedge.com)</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:.2rem">Alle Werte in Mio. · Öl ab Level 31</div>
+    </div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+      <div id="editorFilter" style="display:flex;gap:.35rem;flex-wrap:wrap"></div>
+      <button class="btn-save-db" onclick="saveDB()">💾 Speichern</button>
+      <button class="btn-reset-db" onclick="resetDB()">↩ Reset</button>
+    </div>
+  </div>
+  <div class="edit-tbl-wrap">
+    <table class="edit-tbl">
+      <thead><tr><th>Gebäude</th><th>Lv.</th><th>HQ-Req</th><th>🌾Nahrung</th><th>⚙️Eisen</th><th>💰Gold</th><th>🔩Öl</th><th>🪨Stein</th><th>💎Quarz</th><th>Score</th><th></th></tr></thead>
+      <tbody id="editorBody"></tbody>
+    </table>
+  </div>
+  <button class="btn-add-row" onclick="addEditorRow()">+ Zeile hinzufügen</button>
+</div>
+
+<!-- Auth via Supabase – kein lokales User-Modal nötig -->
+
+<!-- MODAL -->
+<div class="overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>💾 Spielstände speichern &amp; laden</h3>
+    <div class="save-list" id="saveList"></div>
+    <input class="inp-name" id="saveName" placeholder="Name des Spielstands…"/>
+    <div class="modal-btns">
+      <button class="btn-modal-save" onclick="saveState()">💾 Speichern</button>
+      <button class="btn-modal-close" onclick="closeModal()">✕ Schließen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+// DATENBASIS – verifiziert von cpt-hedge.com (Mio.)
+// Kosten: food, iron, gold, oil, stone, quartz
+// hq_req = HQ-Level das vorhanden sein muss
+// Öl ab Level 31 (Age of Oil / Base Expansion)
+// ════════════════════════════════════════════════════
+const DEFAULT_DB=[
+  {id:'hq',name:'Hauptquartier (HQ)',type:'hq',levels:[
+    {l:1, food:0,    iron:0,    gold:0,   oil:0,      stone:0,quartz:0,hq_req:0, sb:100},
+    {l:2, food:.000068,iron:.000068,gold:0,oil:0,     stone:0,quartz:0,hq_req:1, sb:100},
+    {l:3, food:.001, iron:.001, gold:0,   oil:0,      stone:0,quartz:0,hq_req:2, sb:100},
+    {l:4, food:.0025,iron:.0025,gold:0,   oil:0,      stone:0,quartz:0,hq_req:3, sb:100},
+    {l:5, food:.02,  iron:.02,  gold:0,   oil:0,      stone:0,quartz:0,hq_req:4, sb:100},
+    {l:6, food:.091, iron:.091, gold:0,   oil:0,      stone:0,quartz:0,hq_req:5, sb:100},
+    {l:7, food:.24,  iron:.24,  gold:0,   oil:0,      stone:0,quartz:0,hq_req:6, sb:100},
+    {l:8, food:.39,  iron:.39,  gold:0,   oil:0,      stone:0,quartz:0,hq_req:7, sb:100},
+    {l:9, food:.62,  iron:.62,  gold:.2,  oil:0,      stone:0,quartz:0,hq_req:8, sb:100},
+    {l:10,food:.75,  iron:.75,  gold:.24, oil:0,      stone:0,quartz:0,hq_req:9, sb:100},
+    {l:11,food:1.9,  iron:1.9,  gold:.6,  oil:0,      stone:0,quartz:0,hq_req:10,sb:100},
+    {l:12,food:3.2,  iron:3.2,  gold:1,   oil:0,      stone:0,quartz:0,hq_req:11,sb:100},
+    {l:13,food:3.5,  iron:3.5,  gold:1.1, oil:0,      stone:0,quartz:0,hq_req:12,sb:100},
+    {l:14,food:4.9,  iron:4.9,  gold:1.6, oil:0,      stone:0,quartz:0,hq_req:13,sb:100},
+    {l:15,food:6.8,  iron:6.8,  gold:2.2, oil:0,      stone:0,quartz:0,hq_req:14,sb:100},
+    {l:16,food:12,   iron:12,   gold:3.9, oil:0,      stone:0,quartz:0,hq_req:15,sb:100},
+    {l:17,food:16,   iron:16,   gold:5.1, oil:0,      stone:0,quartz:0,hq_req:16,sb:100},
+    {l:18,food:28,   iron:28,   gold:8.9, oil:0,      stone:0,quartz:0,hq_req:17,sb:100},
+    {l:19,food:33,   iron:33,   gold:11,  oil:0,      stone:0,quartz:0,hq_req:18,sb:100},
+    {l:20,food:60,   iron:60,   gold:19,  oil:0,      stone:0,quartz:0,hq_req:19,sb:100},
+    {l:21,food:84,   iron:84,   gold:27,  oil:0,      stone:0,quartz:0,hq_req:20,sb:100},
+    {l:22,food:110,  iron:110,  gold:35,  oil:0,      stone:0,quartz:0,hq_req:21,sb:100},
+    {l:23,food:140,  iron:140,  gold:44,  oil:0,      stone:0,quartz:0,hq_req:22,sb:100},
+    {l:24,food:170,  iron:170,  gold:54,  oil:0,      stone:0,quartz:0,hq_req:23,sb:100},
+    {l:25,food:290,  iron:290,  gold:93,  oil:0,      stone:0,quartz:0,hq_req:24,sb:100},
+    {l:26,food:400,  iron:400,  gold:130, oil:0,      stone:0,quartz:0,hq_req:25,sb:100},
+    {l:27,food:530,  iron:530,  gold:170, oil:0,      stone:0,quartz:0,hq_req:26,sb:100},
+    {l:28,food:740,  iron:740,  gold:240, oil:0,      stone:0,quartz:0,hq_req:27,sb:100},
+    {l:29,food:1000, iron:1000, gold:330, oil:0,      stone:0,quartz:0,hq_req:28,sb:100},
+    {l:30,food:1400, iron:1400, gold:460, oil:0,      stone:0,quartz:0,hq_req:29,sb:100},
+    {l:31,food:1600, iron:1600, gold:510, oil:1.44,   stone:0,quartz:0,hq_req:30,sb:100},
+    {l:32,food:1700, iron:1700, gold:560, oil:2.3,    stone:0,quartz:0,hq_req:31,sb:100},
+    {l:33,food:1900, iron:1900, gold:620, oil:3.92,   stone:0,quartz:0,hq_req:32,sb:100},
+    {l:34,food:2000, iron:2000, gold:650, oil:7.05,   stone:0,quartz:0,hq_req:33,sb:100},
+    {l:35,food:2100, iron:2100, gold:680, oil:14.1,   stone:0,quartz:0,hq_req:34,sb:100},
+  ]},
+  {id:'tech',name:'Tech Center',type:'hq',levels:[
+    {l:7, food:.21,  iron:.21,  gold:0,   oil:0,      stone:0,quartz:0,hq_req:7, sb:92},
+    {l:10,food:.65,  iron:.65,  gold:.21, oil:0,      stone:0,quartz:0,hq_req:10,sb:92},
+    {l:15,food:6,    iron:6,    gold:1.9, oil:0,      stone:0,quartz:0,hq_req:15,sb:92},
+    {l:20,food:52,   iron:52,   gold:17,  oil:0,      stone:0,quartz:0,hq_req:19,sb:92},
+    {l:21,food:73,   iron:73,   gold:23,  oil:0,      stone:0,quartz:0,hq_req:20,sb:92},
+    {l:22,food:95,   iron:95,   gold:30,  oil:0,      stone:0,quartz:0,hq_req:21,sb:92},
+    {l:23,food:120,  iron:120,  gold:38,  oil:0,      stone:0,quartz:0,hq_req:22,sb:92},
+    {l:24,food:150,  iron:150,  gold:48,  oil:0,      stone:0,quartz:0,hq_req:23,sb:92},
+    {l:25,food:250,  iron:250,  gold:81,  oil:0,      stone:0,quartz:0,hq_req:24,sb:92},
+    {l:26,food:350,  iron:350,  gold:110, oil:0,      stone:0,quartz:0,hq_req:25,sb:92},
+    {l:27,food:460,  iron:460,  gold:150, oil:0,      stone:0,quartz:0,hq_req:26,sb:92},
+    {l:28,food:640,  iron:640,  gold:210, oil:0,      stone:0,quartz:0,hq_req:27,sb:92},
+    {l:29,food:900,  iron:900,  gold:290, oil:0,      stone:0,quartz:0,hq_req:28,sb:92},
+    {l:30,food:1300, iron:1300, gold:400, oil:0,      stone:0,quartz:0,hq_req:29,sb:92},
+    {l:31,food:1400, iron:1400, gold:440, oil:.81,    stone:0,quartz:0,hq_req:30,sb:92},
+    {l:32,food:1500, iron:1500, gold:490, oil:1.3,    stone:0,quartz:0,hq_req:31,sb:92},
+    {l:33,food:1700, iron:1700, gold:540, oil:2.2,    stone:0,quartz:0,hq_req:32,sb:92},
+    {l:34,food:1800, iron:1800, gold:570, oil:3.97,   stone:0,quartz:0,hq_req:33,sb:92},
+    {l:35,food:1900, iron:1900, gold:590, oil:7.93,   stone:0,quartz:0,hq_req:34,sb:92},
+  ]},
+  {id:'barracks',name:'Kaserne (Barracks)',type:'mil',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:82},
+    {l:15,food:3.4,  iron:3.4,  gold:1.4, oil:0,      stone:0,quartz:0,hq_req:15,sb:82},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:19,sb:82},
+    {l:21,food:42,   iron:42,   gold:17,  oil:0,      stone:0,quartz:0,hq_req:20,sb:82},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:21,sb:82},
+    {l:23,food:68,   iron:68,   gold:27,  oil:0,      stone:0,quartz:0,hq_req:22,sb:82},
+    {l:24,food:85,   iron:85,   gold:34,  oil:0,      stone:0,quartz:0,hq_req:23,sb:82},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:82},
+    {l:26,food:200,  iron:200,  gold:81,  oil:0,      stone:0,quartz:0,hq_req:25,sb:82},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:82},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:82},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:82},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:82},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:82},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:82},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:82},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:82},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:82},
+  ]},
+  {id:'tank',name:'Panzer-Center',type:'mil',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:79},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:19,sb:79},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:21,sb:79},
+    {l:24,food:85,   iron:85,   gold:34,  oil:0,      stone:0,quartz:0,hq_req:23,sb:79},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:79},
+    {l:26,food:200,  iron:200,  gold:81,  oil:0,      stone:0,quartz:0,hq_req:25,sb:79},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:79},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:79},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:79},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:79},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:79},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:79},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:79},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:79},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:79},
+  ]},
+  {id:'air',name:'Air Center',type:'mil',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:77},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:19,sb:77},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:21,sb:77},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:77},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:77},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:77},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:77},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:77},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:77},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:77},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:77},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:77},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:77},
+  ]},
+  {id:'missile',name:'Missile Center',type:'mil',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:75},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:19,sb:75},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:75},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:75},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:75},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:75},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:75},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:75},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:75},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:75},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:75},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:75},
+  ]},
+  {id:'hospital',name:'Krankenhaus',type:'mil',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:74},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:18,sb:74},
+    {l:21,food:42,   iron:42,   gold:17,  oil:0,      stone:0,quartz:0,hq_req:20,sb:74},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:74},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:74},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:74},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:74},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:74},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:74},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:74},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:74},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:74},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:74},
+  ]},
+  {id:'wall',name:'Mauer (Wall)',type:'def',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:66},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:19,sb:66},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:21,sb:66},
+    {l:24,food:85,   iron:85,   gold:34,  oil:0,      stone:0,quartz:0,hq_req:23,sb:66},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:66},
+    {l:26,food:200,  iron:200,  gold:81,  oil:0,      stone:0,quartz:0,hq_req:25,sb:66},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:66},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:66},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:66},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:66},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:66},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:66},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:66},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:66},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:66},
+  ]},
+  {id:'drill',name:'Übungsgelände (Drill)',type:'mil',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:70},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:14,sb:70},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:21,sb:70},
+    {l:24,food:85,   iron:85,   gold:34,  oil:0,      stone:0,quartz:0,hq_req:23,sb:70},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:70},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:70},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:70},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:70},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:70},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:70},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:70},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:70},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:70},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:70},
+  ]},
+  {id:'alliance',name:'Allianz-Center',type:'eco',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:72},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:16,sb:72},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:21,sb:72},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:72},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:72},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:72},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:72},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:72},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:72},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:72},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:72},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:72},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:72},
+  ]},
+  {id:'farm',name:'Farmland',type:'eco',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:63},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:15,sb:63},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:20,sb:63},
+    {l:24,food:85,   iron:85,   gold:34,  oil:0,      stone:0,quartz:0,hq_req:22,sb:63},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:63},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:63},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:63},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:63},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:63},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:63},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:63},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:63},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:63},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:63},
+  ]},
+  {id:'iron_mine',name:'Eisenmine',type:'eco',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:62},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:15,sb:62},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:20,sb:62},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:62},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:62},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:62},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:62},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:62},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:62},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:62},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:62},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:62},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:62},
+  ]},
+  {id:'gold_mine',name:'Goldmine',type:'eco',levels:[
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:60},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:15,sb:60},
+    {l:22,food:54,   iron:54,   gold:22,  oil:0,      stone:0,quartz:0,hq_req:20,sb:60},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:60},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:60},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:60},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:60},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:60},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:60},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:60},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:60},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:60},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:60},
+  ]},
+  {id:'oil_well',name:'Ölquelle (Oil Well)',type:'eco',levels:[
+    {l:1, food:.001, iron:.001, gold:0,   oil:0,      stone:0,quartz:0,hq_req:1, sb:68},
+    {l:5, food:.02,  iron:.02,  gold:0,   oil:0,      stone:0,quartz:0,hq_req:5, sb:68},
+    {l:10,food:.37,  iron:.37,  gold:.15, oil:0,      stone:0,quartz:0,hq_req:10,sb:68},
+    {l:15,food:3.4,  iron:3.4,  gold:1.4, oil:0,      stone:0,quartz:0,hq_req:15,sb:68},
+    {l:20,food:30,   iron:30,   gold:12,  oil:0,      stone:0,quartz:0,hq_req:19,sb:68},
+    {l:25,food:140,  iron:140,  gold:58,  oil:0,      stone:0,quartz:0,hq_req:24,sb:68},
+    {l:27,food:260,  iron:260,  gold:110, oil:0,      stone:0,quartz:0,hq_req:26,sb:68},
+    {l:28,food:370,  iron:370,  gold:150, oil:0,      stone:0,quartz:0,hq_req:27,sb:68},
+    {l:29,food:520,  iron:520,  gold:210, oil:0,      stone:0,quartz:0,hq_req:28,sb:68},
+    {l:30,food:720,  iron:720,  gold:290, oil:0,      stone:0,quartz:0,hq_req:29,sb:68},
+    {l:31,food:790,  iron:790,  gold:320, oil:.36,    stone:0,quartz:0,hq_req:30,sb:68},
+    {l:32,food:870,  iron:870,  gold:350, oil:.576,   stone:0,quartz:0,hq_req:31,sb:68},
+    {l:33,food:960,  iron:960,  gold:380, oil:.979,   stone:0,quartz:0,hq_req:32,sb:68},
+    {l:34,food:1000, iron:1000, gold:400, oil:1.76,   stone:0,quartz:0,hq_req:33,sb:68},
+    {l:35,food:1100, iron:1100, gold:420, oil:3.53,   stone:0,quartz:0,hq_req:34,sb:68},
+  ]},
+  // S4-Gebäude
+  {id:'lighthouse',name:'Leuchtturm (S4)',type:'s4',levels:[
+    {l:1, food:50,   iron:50,   gold:20,  oil:0,      stone:0,quartz:5, hq_req:20,sb:94},
+    {l:2, food:80,   iron:80,   gold:30,  oil:0,      stone:0,quartz:10,hq_req:20,sb:94},
+    {l:3, food:120,  iron:120,  gold:45,  oil:0,      stone:0,quartz:20,hq_req:22,sb:94},
+    {l:4, food:180,  iron:180,  gold:65,  oil:0,      stone:0,quartz:35,hq_req:23,sb:94},
+    {l:5, food:260,  iron:260,  gold:95,  oil:0,      stone:0,quartz:55,hq_req:24,sb:94},
+    {l:6, food:380,  iron:380,  gold:138, oil:0,      stone:0,quartz:80,hq_req:25,sb:94},
+  ]},
+  {id:'optolab',name:'Optoelektronik-Labor (S4)',type:'s4',levels:[
+    {l:1, food:40,   iron:40,   gold:15,  oil:0,      stone:0,quartz:8, hq_req:20,sb:90},
+    {l:2, food:65,   iron:65,   gold:22,  oil:0,      stone:0,quartz:15,hq_req:21,sb:90},
+    {l:3, food:95,   iron:95,   gold:32,  oil:0,      stone:0,quartz:25,hq_req:22,sb:90},
+    {l:4, food:140,  iron:140,  gold:48,  oil:0,      stone:0,quartz:40,hq_req:23,sb:90},
+    {l:5, food:200,  iron:200,  gold:68,  oil:0,      stone:0,quartz:58,hq_req:24,sb:90},
+    {l:6, food:280,  iron:280,  gold:95,  oil:0,      stone:0,quartz:80,hq_req:25,sb:90},
+  ]},
+  {id:'quartz_ws',name:'Quarz-Workshop (S4)',type:'s4',levels:[
+    {l:1, food:30,   iron:30,   gold:10,  oil:0,      stone:0,quartz:4, hq_req:20,sb:85},
+    {l:2, food:48,   iron:48,   gold:15,  oil:0,      stone:0,quartz:9, hq_req:20,sb:85},
+    {l:3, food:70,   iron:70,   gold:22,  oil:0,      stone:0,quartz:16,hq_req:21,sb:85},
+    {l:4, food:100,  iron:100,  gold:32,  oil:0,      stone:0,quartz:26,hq_req:22,sb:85},
+    {l:5, food:145,  iron:145,  gold:46,  oil:0,      stone:0,quartz:40,hq_req:23,sb:85},
+    {l:6, food:210,  iron:210,  gold:66,  oil:0,      stone:0,quartz:60,hq_req:24,sb:85},
+  ]},
+  {id:'prot_field',name:'Protectors Field (S4)',type:'s4',levels:[
+    {l:1, food:60,   iron:60,   gold:22,  oil:0,      stone:0,quartz:12,hq_req:21,sb:88},
+    {l:2, food:95,   iron:95,   gold:34,  oil:0,      stone:0,quartz:22,hq_req:22,sb:88},
+    {l:3, food:140,  iron:140,  gold:50,  oil:0,      stone:0,quartz:36,hq_req:23,sb:88},
+    {l:4, food:200,  iron:200,  gold:72,  oil:0,      stone:0,quartz:55,hq_req:24,sb:88},
+    {l:5, food:280,  iron:280,  gold:100, oil:0,      stone:0,quartz:78,hq_req:25,sb:88},
+  ]},
+];
+
+// ════════════════════════════════════════════════════
+// STATE & HELPERS
+// ════════════════════════════════════════════════════
+const TYPE_TAG  ={hq:'tag-hq',mil:'tag-mil',eco:'tag-eco',def:'tag-def',s4:'tag-s4'};
+const TYPE_LBL  ={hq:'HQ/Kern',mil:'Militär',eco:'Ressource',def:'Verteidigung',s4:'Season 4'};
+const RES_KEYS  =['food','iron','gold','oil','stone','quartz'];
+const RES_ICO   ={food:'🌾',iron:'⚙️',gold:'💰',oil:'🔩',stone:'🪨',quartz:'💎'};
+const STYLE_MULT={
+  hq:      {hq:1.6,mil:1.0,eco:0.6,def:0.7,s4:0.8},
+  balanced:{hq:1.2,mil:1.1,eco:1.0,def:0.9,s4:1.0},
+  eco:     {hq:0.8,mil:0.7,eco:1.6,def:0.7,s4:1.0},
+  mil:     {hq:1.0,mil:1.6,eco:0.6,def:1.2,s4:0.8},
+  s4:      {hq:1.0,mil:0.8,eco:0.6,def:0.6,s4:1.7},
+};
+let currentStyle='hq',currentSort='score',progFilter='all',editorFilter='all';
+let darkMode=true,lastResults=[],lastCant=[],_istFilter='all',autoSaveTimer=null;
+
+function getDB(){const r=localStorage.getItem('lwDB_v41');return r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_DB));}
+function setDB(db){localStorage.setItem('lwDB_v41',JSON.stringify(db));}
+let BUILDINGS=getDB();
+function getCurLevels(){return JSON.parse(localStorage.getItem('lwCurLevels')||'{}');}
+function setCurLevels(o){localStorage.setItem('lwCurLevels',JSON.stringify(o));}
+function getResCache(){return JSON.parse(localStorage.getItem('lwResCache')||'{}');}
+function setResCache(o){localStorage.setItem('lwResCache',JSON.stringify(o));}
+
+function autoSave(){
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(async()=>{
+    const res={};RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);if(el)res[k]=el.value;});
+    setResCache(res);
+    const cur={};BUILDINGS.forEach(b=>{const el=document.getElementById('ist_'+b.id);if(el)cur[b.id]=parseInt(el.value)||0;});
+    setCurLevels(cur);
+    localStorage.setItem('lwStyle_'+(_currentUserId||'guest'),currentStyle);
+    // Supabase AutoSave
+    if(_currentUserId){
+      try{ await dbAutoSave(_currentUserId, currentStyle, res, cur); }catch(e){}
+    }
+    const ind=document.getElementById('savedIndicator');ind.classList.add('show');
+    setTimeout(()=>ind.classList.remove('show'),2000);
+  },400);
+}
+
+function toggleTheme(){
+  darkMode=!darkMode;
+  document.documentElement.dataset.theme=darkMode?'dark':'light';
+  document.getElementById('themeBtn').textContent=darkMode?'🌙':'☀️';
+  localStorage.setItem('lwTheme',darkMode?'dark':'light');
+}
+
+function showTab(name,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.m-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');
+  if(name==='tracker')renderTracker();
+  if(name==='editor')renderEditor();
+}
+
+document.querySelectorAll('.sty-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.sty-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');currentStyle=b.dataset.sty;autoSave();
+  });
+});
+
+// ════ IST-STAND ════
+function setIstFilter(f,btn){_istFilter=f;document.querySelectorAll('.if-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderIstTable();}
+
+function renderIstTable(){
+  const cur=getCurLevels();
+  const list=_istFilter==='all'?BUILDINGS:BUILDINGS.filter(b=>b.type===_istFilter);
+  document.getElementById('istBody').innerHTML=list.map(b=>{
+    const maxLv=b.levels[b.levels.length-1]?.l||0;
+    const curLv=cur[b.id]||0;
+    return `<tr>
+      <td style="font-size:.8rem"><strong>${b.name}</strong></td>
+      <td><span class="tag ${TYPE_TAG[b.type]||'tag-eco'}">${TYPE_LBL[b.type]||b.type}</span></td>
+      <td><input class="lv-inp" type="number" id="ist_${b.id}" min="0" max="${maxLv}" value="${curLv}" oninput="autoSave()" onchange="autoSave()"/></td>
+      <td class="lv-max-hint">${maxLv}</td>
+      <td><button class="reset-lv" onclick="resetLv('${b.id}')">↩</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function resetLv(id){const el=document.getElementById('ist_'+id);if(el){el.value=0;autoSave();}}
+
+// ════ BERECHNUNG ════
+function getRes(){const r={};RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);r[k]=el?parseFloat(el.value)||0:0;});return r;}
+
+function calculate(){
+  const res=getRes();const cur=getCurLevels();const mult=STYLE_MULT[currentStyle];
+  const canDo=[],cant=[];
+  for(const b of BUILDINGS){
+    const curLv=cur[b.id]||0;
+    const nextLv=b.levels.find(l=>l.l>curLv);
+    if(!nextLv)continue;
+    const hqCur=cur['hq']||0;
+    if(hqCur<nextLv.hq_req)continue;
+    const ok={};RES_KEYS.forEach(k=>ok[k]=res[k]>=nextLv[k]);
+    const feasible=Object.values(ok).every(Boolean);
+    const score=Math.round(nextLv.sb*(mult[b.type]||1));
+    const total=RES_KEYS.reduce((s,k)=>s+nextLv[k],0);
+    const entry={id:b.id,name:b.name,type:b.type,fromLv:curLv,toLv:nextLv.l,cost:nextLv,ok,score,total};
+    if(feasible)canDo.push(entry);else cant.push(entry);
+  }
+  lastResults=canDo;lastCant=cant;renderResults(currentSort);
+}
+
+function sortBy(key,btn){
+  currentSort=key;document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');renderResults(key);
+}
+
+function renderResults(sortKey){
+  document.getElementById('resultSection').style.display='block';
+  document.getElementById('start-hint').style.display='none';
+  const res=getRes();
+  const sorted=[...lastResults].sort((a,b)=>sortKey==='score'?b.score-a.score:sortKey==='cost'?b.total-a.total:a.name.localeCompare(b.name));
+  const maxScore=Math.max(sorted[0]?.score||1,1);
+  const empty=document.getElementById('emptyState');
+  document.getElementById('statsBar').innerHTML=`<span class="ok">✅ ${sorted.length} jetzt upgradebar</span><span style="margin-left:.5rem">· Spielstil: <strong>${currentStyle}</strong> · Daten: Level 1–35 inkl. Öl</span>`;
+  if(!sorted.length){document.getElementById('resultBody').innerHTML='';empty.style.display='block';}
+  else{
+    empty.style.display='none';
+    document.getElementById('resultBody').innerHTML=sorted.map((r,i)=>{
+      const rank=i+1;
+      const rkcls=rank===1?'rk1':rank===2?'rk2':rank===3?'rk3':'rko';
+      const costHtml=RES_KEYS.map(k=>r.cost[k]>0?`<span class="chip">${RES_ICO[k]}${r.cost[k]}</span>`:'').join('');
+      const bw=Math.round((r.score/maxScore)*100);
+      return `<tr>
+        <td><span class="rk ${rkcls}">${rank}</span></td>
+        <td><strong>${r.name}</strong></td>
+        <td><span class="upgrade-arrow">${r.fromLv===0?'(neu)':'Lv.'+r.fromLv}</span><span style="color:var(--muted);margin:0 .2rem">→</span><span class="upgrade-new">Lv.${r.toLv}</span></td>
+        <td><span class="tag ${TYPE_TAG[r.type]||'tag-eco'}">${TYPE_LBL[r.type]||r.type}</span></td>
+        <td style="white-space:normal">${costHtml}</td>
+        <td><div style="display:flex;align-items:center;gap:.4rem"><span style="font-weight:800;color:var(--accent);min-width:28px">${r.score}</span><div class="bar-bg"><div class="bar-fill" style="width:${bw}%;background:var(--green)"></div></div></div></td>
+      </tr>`;
+    }).join('');
+  }
+  const cantSection=document.getElementById('cantSection');
+  if(!lastCant.length){cantSection.style.display='none';return;}
+  cantSection.style.display='block';
+  document.getElementById('cantStats').innerHTML=`<span class="no">🚫 ${lastCant.length} nächste Upgrades noch nicht finanzierbar</span>`;
+  document.getElementById('cantBody').innerHTML=lastCant.map(r=>{
+    const costHtml=RES_KEYS.map(k=>r.cost[k]>0?`<span class="chip${r.ok[k]?'':' warn'}">${RES_ICO[k]}${r.cost[k]}</span>`:'').join('');
+    const miss=RES_KEYS.filter(k=>!r.ok[k]&&r.cost[k]>0).map(k=>`${RES_ICO[k]}−${Math.max(0,r.cost[k]-(res[k]||0)).toFixed(2)}M`);
+    return `<tr>
+      <td><strong>${r.name}</strong></td>
+      <td><span class="upgrade-arrow">${r.fromLv===0?'(neu)':'Lv.'+r.fromLv}</span><span style="color:var(--muted);margin:0 .2rem">→</span><span class="upgrade-new">Lv.${r.toLv}</span></td>
+      <td><span class="tag ${TYPE_TAG[r.type]||'tag-eco'}">${TYPE_LBL[r.type]||r.type}</span></td>
+      <td style="white-space:normal">${costHtml}</td>
+      <td style="font-size:.72rem;color:var(--red)">${miss.join(' · ')}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ════ TRACKER ════
+function setPF(f,btn){progFilter=f;document.querySelectorAll('.pf-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderTracker();}
+
+function renderTracker(){
+  const cur=getCurLevels();
+  const filtered=progFilter==='all'?BUILDINGS:BUILDINGS.filter(b=>b.type===progFilter);
+  let tMax=0,tCur=0;
+  BUILDINGS.forEach(b=>{const m=b.levels[b.levels.length-1]?.l||0;tMax+=m;tCur+=Math.min(cur[b.id]||0,m);});
+  const pct=tMax>0?Math.round(tCur/tMax*100):0;
+  const maxed=BUILDINGS.filter(b=>{const m=b.levels[b.levels.length-1]?.l||0;return(cur[b.id]||0)>=m&&m>0;}).length;
+  document.getElementById('progSummary').innerHTML=`
+    <div class="prog-sum-box"><div class="num">${pct}%</div><div class="lbl">Fortschritt</div></div>
+    <div class="prog-sum-box"><div class="num">${BUILDINGS.length}</div><div class="lbl">Gebäude</div></div>
+    <div class="prog-sum-box"><div class="num">${maxed}</div><div class="lbl">Maxed ✅</div></div>
+    <div class="prog-sum-box"><div class="num">S4</div><div class="lbl">Season</div></div>`;
+  document.getElementById('progGrid').innerHTML=filtered.map(b=>{
+    const maxLv=b.levels[b.levels.length-1]?.l||0;
+    const curLv=Math.min(cur[b.id]||0,maxLv);
+    const pct2=maxLv>0?Math.round((curLv/maxLv)*100):0;
+    const levels=b.levels.map(l=>l.l);
+    const nextLv=levels.find(l=>l>curLv)||null;
+    const prevLvArr=[...levels].filter(l=>l<curLv);const prevLv=prevLvArr.length?prevLvArr[prevLvArr.length-1]:null;
+    const isMaxed=curLv>=maxLv&&maxLv>0;
+    return `<div class="prog-card">
+      <div class="prog-card-hdr"><span class="prog-card-name">${b.name}</span><span class="tag ${TYPE_TAG[b.type]||'tag-eco'}" style="font-size:.64rem">${TYPE_LBL[b.type]}</span></div>
+      <div class="prog-bar-wrap"><div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct2}%;${isMaxed?'background:var(--green)':''}"></div></div><span class="prog-pct">${pct2}%</span></div>
+      <div class="prog-lv">Level <strong style="color:var(--text)">${curLv}</strong> / ${maxLv}${isMaxed?' <span style="color:var(--green);font-weight:700">✅ Max</span>':nextLv?` · nächstes: <strong>${nextLv}</strong>`:''}</div>
+      <div class="prog-actions">
+        <button class="btn-lv down" onclick="changeLvT('${b.id}',-1)" ${prevLv===null&&curLv===0?'disabled':''}>▼ ${prevLv!==null?prevLv:'—'}</button>
+        <button class="btn-lv" onclick="resetLvT('${b.id}')">↩</button>
+        <button class="btn-lv up" onclick="changeLvT('${b.id}',1)" ${isMaxed?'disabled':''}>▲ ${nextLv||'Max'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changeLvT(id,dir){
+  const cur=getCurLevels();const b=BUILDINGS.find(x=>x.id===id);if(!b)return;
+  const levels=b.levels.map(l=>l.l);const curLv=cur[id]||0;const idx=levels.indexOf(curLv);
+  if(dir>0){if(idx===-1)cur[id]=levels[0];else if(idx<levels.length-1)cur[id]=levels[idx+1];}
+  else{if(idx>0)cur[id]=levels[idx-1];else cur[id]=0;}
+  setCurLevels(cur);
+  const el=document.getElementById('ist_'+id);if(el)el.value=cur[id]||0;
+  renderTracker();
+}
+function resetLvT(id){const cur=getCurLevels();delete cur[id];setCurLevels(cur);const el=document.getElementById('ist_'+id);if(el)el.value=0;renderTracker();}
+
+// ════ EDITOR ════
+function renderEditor(){
+  const types=['all','hq','mil','eco','def','s4'];
+  const tl={all:'Alle',hq:'HQ',mil:'Militär',eco:'Ressource',def:'Verteidigung',s4:'S4'};
+  document.getElementById('editorFilter').innerHTML=types.map(t=>`<button class="ef-btn${t===editorFilter?' active':''}" onclick="setEF('${t}',this)">${tl[t]}</button>`).join('');
+  const list=editorFilter==='all'?BUILDINGS:BUILDINGS.filter(b=>b.type===editorFilter);
+  const rows=[];list.forEach(b=>b.levels.forEach(lv=>rows.push({b,lv})));
+  document.getElementById('editorBody').innerHTML=rows.map(({b,lv})=>`<tr>
+    <td><strong style="font-size:.77rem">${b.name}</strong></td>
+    <td><input class="cell-inp" style="width:40px" value="${lv.l}" onchange="updateCell('${b.id}',${lv.l},'l',this.value)"/></td>
+    <td><input class="cell-inp" style="width:40px" value="${lv.hq_req}" onchange="updateCell('${b.id}',${lv.l},'hq_req',this.value)"/></td>
+    ${['food','iron','gold','oil','stone','quartz'].map(k=>`<td><input class="cell-inp" value="${lv[k]}" onchange="updateCell('${b.id}',${lv.l},'${k}',this.value)"/></td>`).join('')}
+    <td><input class="cell-inp" style="width:40px" value="${lv.sb}" onchange="updateCell('${b.id}',${lv.l},'sb',this.value)"/></td>
+    <td><button class="btn-del-row" onclick="delRow('${b.id}',${lv.l})">🗑</button></td>
+  </tr>`).join('');
+}
+function setEF(f,btn){editorFilter=f;document.querySelectorAll('.ef-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderEditor();}
+function updateCell(bid,lvl,field,val){const b=BUILDINGS.find(b=>b.id===bid);if(!b)return;const lv=b.levels.find(l=>l.l===lvl);if(!lv)return;lv[field]=isNaN(parseFloat(val))?val:parseFloat(val);}
+function delRow(bid,lvl){const b=BUILDINGS.find(b=>b.id===bid);if(!b)return;b.levels=b.levels.filter(l=>l.l!==lvl);renderEditor();}
+function addEditorRow(){BUILDINGS.push({id:'custom_'+Date.now(),name:'Neues Gebäude',type:'eco',levels:[{l:1,food:0,iron:0,gold:0,oil:0,stone:0,quartz:0,hq_req:1,sb:60}]});editorFilter='all';renderEditor();renderIstTable();}
+function saveDB(){setDB(BUILDINGS);const btn=document.querySelector('.btn-save-db');btn.textContent='✅ Gespeichert!';setTimeout(()=>btn.textContent='💾 Speichern',2000);}
+function resetDB(){if(!confirm('Alle Änderungen zurücksetzen?'))return;BUILDINGS=JSON.parse(JSON.stringify(DEFAULT_DB));localStorage.removeItem('lwDB_v41');renderEditor();renderIstTable();}
+
+// ════ SPIELSTÄNDE ════
+function openModal(){renderSaveList();document.getElementById('modalOverlay').classList.add('show');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+function getStates(){return JSON.parse(localStorage.getItem('lwStates_v41')||'[]');}
+function setStates(s){localStorage.setItem('lwStates_v41',JSON.stringify(s));}
+async function saveState(){
+  const name=document.getElementById('saveName').value.trim()||'Stand '+new Date().toLocaleString('de-DE');
+  const res=getRes();const cur=getCurLevels();
+  if(_currentUserId){
+    try{
+      await dbSaveState(_currentUserId,name,currentStyle,res,cur);
+      _statesCache=await dbLoadStates(_currentUserId);
+    }catch(e){alert('Fehler beim Speichern: '+e.message);return;}
+  } else {
+    const states=getStates();
+    states.unshift({name,date:new Date().toISOString(),style:currentStyle,res,cur});
+    if(states.length>50)states.pop();setStates(states);
+  }
+  document.getElementById('saveName').value='';
+  renderSaveList();updateProfileDropdown();
+}
+function loadState(idx){
+  const s=getStates()[idx];if(!s)return;
+  currentStyle=s.style;document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===s.style));localStorage.setItem(getUserKey('Style'),s.style);
+  RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);if(el&&s.res)el.value=s.res[k]||0;});
+  if(s.cur){setCurLevels(s.cur);BUILDINGS.forEach(b=>{const el=document.getElementById('ist_'+b.id);if(el)el.value=s.cur[b.id]||0;});}
+  closeModal();
+}
+async function deleteState(idx){
+  const s=getStates();const entry=s[idx];
+  if(!entry)return;
+  if(_currentUserId && entry.id){
+    try{ await dbDeleteState(entry.id); }catch(e){}
+    _statesCache=await dbLoadStates(_currentUserId);
+  } else { s.splice(idx,1);setStates(s); }
+  renderSaveList();updateProfileDropdown();
+}
+function renderSaveList(){updateProfileDropdown();
+  const states=getStates();const el=document.getElementById('saveList');
+  el.innerHTML=states.length?states.map((s,i)=>{
+    const dt=s.updated_at||s.date;
+    const dtStr=dt?new Date(dt).toLocaleString('de-DE'):'';
+    return `<div class="save-item"><div><div style="font-size:.82rem"><strong>${s.name}</strong></div><div class="meta">Stil: ${s.style||'—'} · ${dtStr}</div></div><div class="save-acts"><button class="btn-load" onclick="loadState(${i})">▶ Laden</button><button class="btn-del-save" onclick="deleteState(${i})">🗑</button></div></div>`;
+  }).join(''):'<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:.5rem">Keine Stände gespeichert</div>';
+}
+
+// ════ CSV ════
+function exportCSV(){
+  if(!lastResults.length){alert('Bitte zuerst berechnen!');return;}
+  const rows=[['Rang','Gebäude','Von Lv','Auf Lv','Typ','Nahrung','Eisen','Gold','Öl','Stein','Quarz','Score']];
+  [...lastResults].sort((a,b)=>b.score-a.score).forEach((r,i)=>rows.push([i+1,r.name,r.fromLv,r.toLv,r.type,r.cost.food,r.cost.iron,r.cost.gold,r.cost.oil,r.cost.stone,r.cost.quartz,r.score]));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`LastWar_S4_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+// ════ QUICKSAVE & PROFIL-SYSTEM ════
+function quickSave(){
+  const name=prompt('Profilname eingeben:','Stand '+new Date().toLocaleString('de-DE'));
+  if(!name)return;
+  const res=getRes();const cur=getCurLevels();
+  const states=getStates();
+  // Überschreiben wenn Name gleich
+  const existIdx=states.findIndex(s=>s.name===name);
+  const entry={name,date:new Date().toISOString(),style:currentStyle,res,cur};
+  if(existIdx>=0){if(!confirm(`Profil "${name}" überschreiben?`))return;states[existIdx]=entry;}
+  else{states.unshift(entry);if(states.length>50)states.pop();}
+  setStates(states);
+  updateProfileDropdown();
+  const ind=document.getElementById('savedIndicator');ind.textContent='✅ '+name+' gespeichert';
+  ind.classList.add('show');setTimeout(()=>{ind.textContent='✅ Gespeichert';ind.classList.remove('show');},2500);
+}
+
+function updateProfileDropdown(){
+  const sel=document.getElementById('profileSelect');if(!sel)return;
+  const states=getStates();
+  sel.innerHTML='<option value="">– Profil laden –</option>'+
+    states.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
+}
+
+function loadProfile(idx){
+  if(idx==='')return;
+  loadState(parseInt(idx));
+  updateProfileDropdown();
+  document.getElementById('profileSelect').value='';
+}
+
+// JSON Export – kompletter Spielstand als Datei
+function exportJSON(){
+  const data={
+    version:'4.1',
+    exported:new Date().toISOString(),
+    profiles:getStates(),
+    autoSave:{res:getResCache(),cur:getCurLevels(),style:localStorage.getItem('lwStyle')||'hq'},
+    customDB:localStorage.getItem('lwDB_v41')||null
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`LastWar_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+// JSON Import
+function importJSON(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.profiles)setStates(data.profiles);
+      if(data.autoSave){
+        if(data.autoSave.res)setResCache(data.autoSave.res);
+        if(data.autoSave.cur)setCurLevels(data.autoSave.cur);
+        if(data.autoSave.style)localStorage.setItem('lwStyle',data.autoSave.style);
+      }
+      if(data.customDB)localStorage.setItem('lwDB_v41',data.customDB);
+      // Reload UI
+      location.reload();
+    }catch(err){alert('Fehler beim Importieren: '+err.message);}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+// ════ SUPABASE AUTH INTEGRATION ════
+// Datenstruktur: { users:[{id,name,created}], activeUserId }
+// Pro User eigener Namespace in localStorage: lwRes_{id}, lwCur_{id}, lwStyle_{id}, lwStates_{id}
+
+// Auth via Supabase – keine lokale User-Key-Verwaltung nötig
+
+// Override Storage-Funktionen für User-Kontext
+// localStorage als lokaler Cache, Supabase als Quelle der Wahrheit
+let _currentUserId = null;
+let _currentProfile = null;
+
+function getCurLevels(){return JSON.parse(localStorage.getItem('lwCurLevels_'+(_currentUserId||'guest'))||'{}');}
+function setCurLevels(o){localStorage.setItem('lwCurLevels_'+(_currentUserId||'guest'),JSON.stringify(o));}
+function getResCache(){return JSON.parse(localStorage.getItem('lwResCache_'+(_currentUserId||'guest'))||'{}');}
+function setResCache(o){localStorage.setItem('lwResCache_'+(_currentUserId||'guest'),JSON.stringify(o));}
+// Stände kommen aus Supabase, localStorage nur als Offline-Fallback
+let _statesCache = [];
+function getStates(){return _statesCache;}
+function setStates(s){_statesCache=s;}
+
+async function doLogout(){await logout();}
+
+// (Funktion durch Supabase Auth ersetzt)
+
+
+// (Funktion durch Supabase Auth ersetzt)
+
+
+// (Funktion durch Supabase Auth ersetzt)
+
+
+// (Funktion durch Supabase Auth ersetzt)
+
+
+// (Funktion durch Supabase Auth ersetzt)
+
+
+// (Funktion durch Supabase Auth ersetzt)
+
+
+// autoSave Style auch user-spezifisch speichern
+function autoSaveStyle(){localStorage.setItem(getUserKey('Style'),currentStyle);}
+
+// ════ INIT ════
+(function(){
+  const theme=localStorage.getItem('lwTheme')||'dark';darkMode=theme==='dark';
+  document.documentElement.dataset.theme=theme;document.getElementById('themeBtn').textContent=darkMode?'🌙':'☀️';
+  renderIstTable();
+  const cur=getCurLevels();BUILDINGS.forEach(b=>{const el=document.getElementById('ist_'+b.id);if(el&&cur[b.id]!==undefined)el.value=cur[b.id];});
+  const res=getResCache();RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);if(el&&res[k]!==undefined)el.value=res[k];});
+  const sty=localStorage.getItem('lwStyle')||'hq';currentStyle=sty;document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/db.js"></script>
+</body>
+</html>
