@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="de" data-theme="dark">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Last War S4 – Upgrade-Planer v5.0</title>
@@ -1043,7 +1044,7 @@ function setStates(s){_statesCache=s;}
 
 
 // autoSave Style auch user-spezifisch speichern
-function autoSaveStyle(){localStorage.setItem(getUserKey('Style'),currentStyle);}
+function autoSaveStyle(){localStorage.setItem('lwStyle_'+(_currentUserId||'guest'),currentStyle);}
 
 // ════ INIT ════
 (async function(){
@@ -1114,7 +1115,7 @@ function autoSaveStyle(){localStorage.setItem(getUserKey('Style'),currentStyle);
   updateProfileDropdown();
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
 <script>
 
 // ══════════════════════════════════════════
