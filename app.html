@@ -660,10 +660,7 @@ let darkMode=true,lastResults=[],lastCant=[],_istFilter='all',autoSaveTimer=null
 function getDB(){const r=localStorage.getItem('lwDB_v41');return r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_DB));}
 function setDB(db){localStorage.setItem('lwDB_v41',JSON.stringify(db));}
 let BUILDINGS=getDB();
-function getCurLevels(){return JSON.parse(localStorage.getItem('lwCurLevels')||'{}');}
-function setCurLevels(o){localStorage.setItem('lwCurLevels',JSON.stringify(o));}
-function getResCache(){return JSON.parse(localStorage.getItem('lwResCache')||'{}');}
-function setResCache(o){localStorage.setItem('lwResCache',JSON.stringify(o));}
+// Storage-Funktionen weiter unten (user-spezifisch)
 
 function autoSave(){
   clearTimeout(autoSaveTimer);
@@ -868,8 +865,6 @@ function resetDB(){if(!confirm('Alle Änderungen zurücksetzen?'))return;BUILDIN
 // ════ SPIELSTÄNDE ════
 function openModal(){renderSaveList();document.getElementById('modalOverlay').classList.add('show');}
 function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
-function getStates(){return JSON.parse(localStorage.getItem('lwStates_v41')||'[]');}
-function setStates(s){localStorage.setItem('lwStates_v41',JSON.stringify(s));}
 async function saveState(){
   const name=document.getElementById('saveName').value.trim()||'Stand '+new Date().toLocaleString('de-DE');
   const res=getRes();const cur=getCurLevels();
@@ -1065,7 +1060,7 @@ function autoSaveStyle(){localStorage.setItem('lwStyle_'+(_currentUserId||'guest
 
   // ── User-Badge ──
   const uname = _currentProfile?.username || session.user.email;
-  const avatar  = document.getElementById('userAvatar');
+  const avatar  = document.getElementById('userAvatar'); // FIXED: null-check folgt
   const label   = document.getElementById('userLabel');
   const roleEl  = document.getElementById('userRole');
   const adminBtn= document.getElementById('adminBtn');
