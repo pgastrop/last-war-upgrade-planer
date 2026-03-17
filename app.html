@@ -1032,13 +1032,72 @@ function setStates(s){_statesCache=s;}
 function autoSaveStyle(){localStorage.setItem(getUserKey('Style'),currentStyle);}
 
 // ════ INIT ════
-(function(){
-  const theme=localStorage.getItem('lwTheme')||'dark';darkMode=theme==='dark';
-  document.documentElement.dataset.theme=theme;document.getElementById('themeBtn').textContent=darkMode?'🌙':'☀️';
+(async function(){
+  // Theme
+  const theme = localStorage.getItem('lwTheme')||'dark';
+  darkMode = theme==='dark';
+  document.documentElement.dataset.theme = theme;
+  document.getElementById('themeBtn').textContent = darkMode ? '🌙' : '☀️';
+
+  // ── Auth-Check ──
+  const session = await sbGetSession();
+  if(!session){
+    window.location.replace('index.html');
+    return;
+  }
+  _currentUserId = session.user.id;
+  _currentProfile = await sbGetProfile(_currentUserId);
+
+  // ── User-Badge ──
+  const uname = _currentProfile?.username || session.user.email;
+  const avatar  = document.getElementById('userAvatar');
+  const label   = document.getElementById('userLabel');
+  const roleEl  = document.getElementById('userRole');
+  const adminBtn= document.getElementById('adminBtn');
+  if(avatar)  avatar.textContent = uname.charAt(0).toUpperCase();
+  if(label)   label.textContent  = uname;
+  if(roleEl)  roleEl.textContent = _currentProfile?.role==='admin' ? '👑' : '';
+  if(adminBtn && _currentProfile?.role==='admin') adminBtn.style.display='inline-block';
+
+  // ── AutoSave aus Supabase laden ──
+  let supabaseLoaded = false;
+  try{
+    const as = await dbLoadAutoSave(_currentUserId);
+    if(as){
+      const res = as.resources  || {};
+      const cur = as.cur_levels || {};
+      setResCache(res);
+      setCurLevels(cur);
+      RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k); if(el) el.value=res[k]||0;});
+      const sty = as.style || 'hq';
+      currentStyle = sty;
+      document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
+      supabaseLoaded = true;
+    }
+  }catch(e){ console.warn('AutoSave Supabase Fehler:', e.message); }
+
+  // ── Fallback: localStorage ──
+  if(!supabaseLoaded){
+    const res = getResCache();
+    RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k); if(el&&res[k]!==undefined) el.value=res[k];});
+    const sty = localStorage.getItem('lwStyle_'+_currentUserId)||'hq';
+    currentStyle = sty;
+    document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
+  }
+
+  // ── Spielstände aus Supabase ──
+  try{ _statesCache = await dbLoadStates(_currentUserId); }
+  catch(e){ _statesCache = []; }
+
+  // ── Ist-Stand einfüllen ──
   renderIstTable();
-  const cur=getCurLevels();BUILDINGS.forEach(b=>{const el=document.getElementById('ist_'+b.id);if(el&&cur[b.id]!==undefined)el.value=cur[b.id];});
-  const res=getResCache();RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);if(el&&res[k]!==undefined)el.value=res[k];});
-  const sty=localStorage.getItem('lwStyle')||'hq';currentStyle=sty;document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
+  const cur = getCurLevels();
+  BUILDINGS.forEach(b=>{
+    const el = document.getElementById('ist_'+b.id);
+    if(el && cur[b.id] !== undefined) el.value = cur[b.id];
+  });
+
+  updateProfileDropdown();
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
