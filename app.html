@@ -662,7 +662,7 @@ function setDB(db){localStorage.setItem('lwDB_v41',JSON.stringify(db));}
 let BUILDINGS=getDB();
 // Storage-Funktionen weiter unten (user-spezifisch)
 
-function autoSave(){
+async function autoSave(){
   clearTimeout(autoSaveTimer);
   autoSaveTimer=setTimeout(async()=>{
     const res={};RES_KEYS.forEach(k=>{const el=document.getElementById('r_'+k);if(el)res[k]=el.value;});
@@ -864,7 +864,7 @@ function resetDB(){if(!confirm('Alle Änderungen zurücksetzen?'))return;BUILDIN
 
 // ════ SPIELSTÄNDE ════
 function openModal(){renderSaveList();document.getElementById('modalOverlay').classList.add('show');}
-function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+async function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
 async function saveState(){
   const name=document.getElementById('saveName').value.trim()||'Stand '+new Date().toLocaleString('de-DE');
   const res=getRes();const cur=getCurLevels();
@@ -1006,6 +1006,10 @@ function importJSON(event){
 
 // Override Storage-Funktionen für User-Kontext
 // localStorage als lokaler Cache, Supabase als Quelle der Wahrheit
+let autoSaveTimer = null;
+let lastResults   = [];
+let lastCant      = [];
+let _istFilter    = 'all';
 let _currentUserId = null;
 let _currentProfile = null;
 
