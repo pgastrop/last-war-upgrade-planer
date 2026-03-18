@@ -264,11 +264,33 @@ async function doRegister() {
   }
   setLoading('btnReg', true, '📝 Konto erstellen');
   try {
-    await Auth.register(email, pass, name);
-    showMsg('✅ Konto erstellt! Bitte E-Mail bestätigen, dann einloggen.', true);
-    setTimeout(() => showTab('login'), 2500);
+    const result = await Auth.register(email, pass, name);
+
+    // Prüfen ob Session direkt vorhanden (E-Mail-Bestätigung deaktiviert)
+    if (result?.session) {
+      showMsg('✅ Konto erstellt! Weiterleitung…', true);
+      setTimeout(() => window.location.replace('app.html'), 800);
+      return;
+    }
+
+    // E-Mail-Bestätigung aktiv → Hinweis anzeigen
+    showMsg('✅ Konto erstellt! Bitte bestätige deine E-Mail-Adresse, dann einloggen.', true);
+    setTimeout(() => showTab('login'), 3000);
+
   } catch (e) {
-    showMsg('❌ ' + escapeHtml(e.message));
+    // Bekannte Fehler verständlich übersetzen
+    const msg = e.message || '';
+    if (msg.includes('already registered') || msg.includes('already been registered')) {
+      showMsg('❌ Diese E-Mail-Adresse ist bereits registriert. Bitte einloggen.');
+    } else if (msg.includes('Password should be')) {
+      showMsg('❌ Passwort zu schwach – mind. 8 Zeichen, besser mit Zahlen & Großbuchstaben.');
+    } else if (msg.includes('invalid email') || msg.includes('Invalid email')) {
+      showMsg('❌ Ungültige E-Mail-Adresse.');
+    } else if (msg.includes('signup is disabled') || msg.includes('Signups not allowed')) {
+      showMsg('❌ Registrierung ist aktuell deaktiviert. Bitte Admin kontaktieren.');
+    } else {
+      showMsg('❌ ' + escapeHtml(msg));
+    }
   } finally {
     setLoading('btnReg', false, '📝 Konto erstellen');
   }
