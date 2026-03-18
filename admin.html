@@ -213,10 +213,24 @@ function renderUsers() {
             : `<button class="btn-sm btn-promote" onclick="setRole('${p.id}','admin')">↑ Admin</button>`)
           : ''}
           ${save ? `<button class="btn-sm btn-view" onclick="showAutoSave('${p.id}','${p.username}')">👁 AutoSave</button>` : ''}
+          ${!isMe ? `<button class="btn-sm" style="background:var(--green)" onclick="impersonate('${p.id}','${p.username.replace(/'/g,"\\'")}')">🔍 Als Nutzer öffnen</button>` : ''}
         </div>
       </td>
     </tr>`;
   }).join('');
+}
+
+// Admin öffnet app.html im Kontext eines anderen Nutzers
+function impersonate(userId, username) {
+  if (!confirm(`Den Planer von „${username}" im Lese-/Bearbeitungsmodus öffnen?\n\nDu kannst Daten ansehen und optimieren – deine eigenen Daten bleiben unberührt.`)) return;
+  // Impersonation-Token in sessionStorage (nur für diesen Tab, kein localStorage)
+  sessionStorage.setItem('lwAdminView', JSON.stringify({
+    userId,
+    username,
+    adminId: me.id,
+    adminName: me.username
+  }));
+  window.open('app.html', '_blank');
 }
 
 function renderStates() {

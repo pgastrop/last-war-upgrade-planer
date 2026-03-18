@@ -164,8 +164,21 @@ tr:hover td{background:var(--hover)}
 .modal-btns{display:flex;gap:.42rem}
 .btn-modal-save{flex:1;padding:.46rem;background:var(--accent);color:#000;font-weight:800;border:none;border-radius:8px;cursor:pointer;font-size:.83rem}
 .btn-modal-close{padding:.46rem .9rem;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:.83rem}
-/* Sync-Status */
-.sync-badge{font-size:.65rem;padding:.1rem .4rem;border-radius:99px;font-weight:700}
+/* Admin-View Banner */
+.admin-view-banner{
+  background:linear-gradient(90deg,#2d1040,#1a0a2e);
+  border-bottom:2px solid var(--purple);
+  padding:.45rem 1.1rem;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:.78rem;color:#ce93d8;gap:.5rem;flex-wrap:wrap;
+}
+.admin-view-banner strong{color:#fff}
+.btn-exit-admin{
+  background:var(--purple);color:#fff;border:none;
+  border-radius:6px;padding:.22rem .65rem;font-size:.72rem;
+  cursor:pointer;font-weight:700;white-space:nowrap;
+}
+.btn-exit-admin:hover{opacity:.85}
 .sync-ok{background:#0d2a18;color:#4ade80}
 .sync-err{background:#3a1a1a;color:#f87171}
 .sync-pending{background:#2a2a0d;color:#e3b341}
@@ -217,6 +230,14 @@ tr:hover td{background:var(--hover)}
   <button class="m-tab active" role="tab" onclick="showTab('planner',this)">🔍 Upgrade-Planer</button>
   <button class="m-tab" role="tab" onclick="showTab('tracker',this)">📈 Fortschritt</button>
   <button class="m-tab" role="tab" onclick="showTab('editor',this)">✏️ Kostentabelle</button>
+</div>
+<!-- Admin-View Banner (nur sichtbar wenn Admin einen Nutzer betrachtet) -->
+<div class="admin-view-banner" id="adminViewBanner" style="display:none">
+  <span>👑 Admin-Ansicht: Du betrachtest den Stand von <strong id="adminViewName"></strong></span>
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <span style="font-size:.7rem;color:#ce93d8;opacity:.7">Änderungen werden für diesen Nutzer gespeichert</span>
+    <button class="btn-exit-admin" onclick="exitAdminView()">✕ Zurück zu Admin</button>
+  </div>
 </div>
 
 <!-- TAB 1 PLANNER -->
@@ -1440,7 +1461,77 @@ function deleteUser(id){
 function openUserModal(){ renderUserList(); document.getElementById('userOverlay').classList.add('show'); }
 function closeUserModal(){ document.getElementById('userOverlay').classList.remove('show'); }
 
-// ════ ESCAPE HELPERS ════
+// ════ ADMIN-IMPERSONATION ════
+let _adminView = null; // { userId, username, adminId, adminName }
+
+function exitAdminView() {
+  sessionStorage.removeItem('lwAdminView');
+  location.href = 'admin.html';
+}
+
+// Lädt AutoSave eines anderen Nutzers (nur für Admin)
+async function loadUserDataAsAdmin(userId) {
+  try {
+    const { data, error } = await _sb.from('autosave')
+      .select('*').eq('user_id', userId).maybeSingle();
+    if (error || !data) return false;
+    if (data.resources) {
+      RES_KEYS.forEach(k => {
+        const el = document.getElementById('r_' + k);
+        if (el && data.resources[k] !== undefined) el.value = data.resources[k];
+      });
+      setResCache(data.resources);
+    }
+    if (data.cur_levels) {
+      setCurLevels(data.cur_levels);
+      BUILDINGS.forEach(b => {
+        const el = document.getElementById('ist_' + b.id);
+        if (el) el.value = data.cur_levels[b.id] || 0;
+      });
+    }
+    if (data.style) {
+      currentStyle = data.style;
+      document.querySelectorAll('.sty-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.sty === data.style));
+    }
+    if (data.season) {
+      const sel = document.getElementById('seasonSelect');
+      if (sel) sel.value = data.season;
+      changeSeason(data.season);
+    }
+    return true;
+  } catch(e) {
+    console.error('[admin-view] loadUserDataAsAdmin:', e);
+    return false;
+  }
+}
+
+// cloudAutoSave im Admin-View schreibt für den Zielnutzer
+// (Override der normalen cloudAutoSave-Funktion wenn _adminView aktiv)
+const _origCloudAutoSave = cloudAutoSave;
+async function cloudAutoSave() {
+  if (_adminView) {
+    // Im Admin-View: Schreibe für den Zielnutzer
+    try {
+      const res = getRes();
+      const cur = getCurLevels();
+      await _sb.from('autosave').upsert({
+        user_id:    _adminView.userId,
+        style:      currentStyle,
+        resources:  res,
+        cur_levels: cur,
+        updated_at: new Date().toISOString(),
+        season:     currentSeason
+      }, { onConflict: 'user_id' });
+      setSyncBadge('ok');
+    } catch(e) {
+      console.warn('[admin-view] cloudAutoSave error:', e.message);
+      setSyncBadge('err');
+    }
+    return;
+  }
+  return _origCloudAutoSave();
+}
 // FIX: Dedizierte Escape-Funktionen für HTML-Attribut und Text-Kontext
 function escTxt(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escAttr(s){ return String(s).replace(/['"&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1493,7 +1584,36 @@ function escAttr(s){ return String(s).replace(/['"&<>]/g, c=>({'&':'&amp;','<':'
   renderUserBadge();
   updateProfileDropdown();
 
-  // Cloud-Daten laden – ist die einzige Quelle der Wahrheit
+  // ── Admin-Impersonation prüfen ──────────────────────────
+  const adminViewRaw = sessionStorage.getItem('lwAdminView');
+  if (adminViewRaw) {
+    try {
+      _adminView = JSON.parse(adminViewRaw);
+      // Sicherheitscheck: Ist der eingeloggte Nutzer wirklich Admin?
+      if (_profile?.role !== 'admin' || _adminView.adminId !== _session.user.id) {
+        sessionStorage.removeItem('lwAdminView');
+        _adminView = null;
+      } else {
+        // Banner anzeigen
+        const banner = document.getElementById('adminViewBanner');
+        const nameEl = document.getElementById('adminViewName');
+        if (banner) banner.style.display = 'flex';
+        if (nameEl) nameEl.textContent = _adminView.username;
+        // User-Badge anpassen
+        const badge = document.getElementById('userAvatar');
+        const label = document.getElementById('userLabel');
+        if (badge) badge.textContent = _adminView.username.charAt(0).toUpperCase();
+        if (label) label.textContent = _adminView.username;
+        // Daten des Zielnutzers laden
+        initSeason(); // Season-UI aufbauen bevor Daten geladen werden
+        await loadUserDataAsAdmin(_adminView.userId);
+        setSyncBadge('ok');
+        return; // Init beendet – kein normales cloudLoadAutoSave mehr
+      }
+    } catch { sessionStorage.removeItem('lwAdminView'); _adminView = null; }
+  }
+
+  // ── Normaler Login ──────────────────────────────────────
   const cloudLoaded = await cloudLoadAutoSave();
 
   if (!cloudLoaded) {
