@@ -175,14 +175,23 @@ tr:hover td{background:var(--hover)}
 <nav>
   <div class="nav-l">
     <span style="font-size:1.5rem">🌑</span>
-    <div class="nav-title">Last War – Upgrade-Planer Season 4
-      <small>Verifizierte Daten (cpt-hedge.com) · Level 1–35 · Öl inkl.</small>
+    <div class="nav-title" id="navTitle">Last War – Upgrade-Planer
+      <small id="navSub">Verifizierte Daten (cpt-hedge.com) · Level 1–35 · Öl inkl.</small>
     </div>
   </div>
   <div class="nav-r">
     <span class="saved-indicator" id="savedIndicator">✅ Gespeichert</span>
-    <!-- FIX: Sync-Status für Supabase -->
     <span class="sync-badge sync-pending" id="syncBadge" title="Cloud-Sync-Status">☁️ …</span>
+    <!-- Season-Auswahl -->
+    <select id="seasonSelect" onchange="changeSeason(this.value)"
+      style="background:var(--inp);border:1px solid var(--accent);border-radius:7px;
+      padding:.28rem .52rem;color:var(--accent);font-size:.73rem;font-weight:700;
+      outline:none;cursor:pointer" aria-label="Season wählen">
+      <option value="s1">🗺️ Season 1</option>
+      <option value="s2">🗺️ Season 2</option>
+      <option value="s3">🗺️ Season 3</option>
+      <option value="s4" selected>🌑 Season 4</option>
+    </select>
     <div class="user-badge" onclick="openUserModal()" title="Benutzer wechseln" role="button" tabindex="0">
       <div class="user-avatar" id="userAvatar">?</div>
       <span id="userLabel" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Kein Nutzer</span>
@@ -199,7 +208,6 @@ tr:hover td{background:var(--hover)}
     <button class="btn-nav" onclick="document.getElementById('importFile').click()">📥 Import</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)"/>
     <button class="btn-nav" onclick="exportCSV()">🗒️ CSV</button>
-    <!-- FIX: Admin-Button nur sichtbar wenn User Admin ist -->
     <button class="btn-nav" id="adminBtn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
     <button class="btn-nav danger" onclick="doLogout()">🚪 Logout</button>
   </div>
@@ -694,6 +702,74 @@ const STYLE_MULT={
 };
 let currentStyle='hq',currentSort='score',progFilter='all',editorFilter='all';
 let darkMode=true,lastResults=[],lastCant=[],_istFilter='all',autoSaveTimer=null;
+let currentSeason='s4'; // Standard: Season 4
+
+// ════ SEASON-LOGIK ════
+// S1/S2: Keine Öl-Gebäude, kein Öl, kein Quarz, kein S4-Tab
+// S3:    Öl vorhanden, aber keine S4-Gebäude, kein Quarz
+// S4:    Alles vorhanden inkl. S4-Gebäude, Quarz, Öl
+
+const SEASON_CONFIG = {
+  s1: { label:'Season 1', icon:'🗺️', maxLv:25, hasOil:false, hasQuartz:false, hasS4:false, sub:'Level 1–25 · Ohne Öl & S4' },
+  s2: { label:'Season 2', icon:'🗺️', maxLv:30, hasOil:false, hasQuartz:false, hasS4:false, sub:'Level 1–30 · Ohne Öl & S4' },
+  s3: { label:'Season 3', icon:'🗺️', maxLv:35, hasOil:true,  hasQuartz:false, hasS4:false, sub:'Level 1–35 · Öl inkl. · Ohne S4' },
+  s4: { label:'Season 4', icon:'🌑', maxLv:35, hasOil:true,  hasQuartz:true,  hasS4:true,  sub:'Level 1–35 · Öl & Quarz inkl.' },
+};
+
+function changeSeason(season) {
+  currentSeason = season;
+  localStorage.setItem('lwSeason', season);
+  const cfg = SEASON_CONFIG[season];
+
+  // Titel aktualisieren
+  document.getElementById('navSub').textContent =
+    `Verifizierte Daten (cpt-hedge.com) · ${cfg.sub}`;
+
+  // Gebäude gefiltert neu laden (S4-Gebäude nur in S4 sichtbar)
+  BUILDINGS = getDB().filter(b => {
+    if (b.type === 's4' && !cfg.hasS4) return false;
+    return true;
+  }).map(b => ({
+    ...b,
+    // Level auf Season-Maximum beschränken
+    levels: b.levels.filter(l => l.l <= cfg.maxLv)
+  })).filter(b => b.levels.length > 0);
+
+  // Öl-Ressource ein/ausblenden
+  const oilBox = document.getElementById('r_oil')?.closest('.res-box');
+  if (oilBox) oilBox.style.display = cfg.hasOil ? '' : 'none';
+
+  // Quarz-Ressource ein/ausblenden
+  const quartzBox = document.getElementById('r_quartz')?.closest('.res-box');
+  if (quartzBox) quartzBox.style.display = cfg.hasQuartz ? '' : 'none';
+
+  // S4-Filter-Button in Ist-Stand ein/ausblenden
+  document.querySelectorAll('[data-if="s4"]').forEach(b =>
+    b.style.display = cfg.hasS4 ? '' : 'none');
+  document.querySelectorAll('[data-pf="s4"]').forEach(b =>
+    b.style.display = cfg.hasS4 ? '' : 'none');
+
+  // S4-Banner in Ergebnissen ein/ausblenden
+  const s4banner = document.querySelector('.s4-banner');
+  if (s4banner) s4banner.style.display = cfg.hasS4 ? '' : 'none';
+
+  // UI neu aufbauen
+  renderIstTable();
+  lastResults = []; lastCant = [];
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('start-hint').style.display = 'block';
+
+  // AutoSave auslösen
+  autoSave();
+}
+
+function initSeason() {
+  const saved = localStorage.getItem('lwSeason') || 's4';
+  currentSeason = saved;
+  const sel = document.getElementById('seasonSelect');
+  if (sel) sel.value = saved;
+  changeSeason(saved);
+}
 
 // Supabase Session
 let _session = null;
@@ -718,7 +794,8 @@ async function cloudAutoSave() {
       style:      currentStyle,
       resources:  res,
       cur_levels: cur,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      season:     currentSeason
     }, { onConflict: 'user_id' });
     setSyncBadge('ok');
   } catch (e) {
@@ -757,6 +834,14 @@ async function cloudLoadAutoSave() {
       localStorage.setItem(getUserKey('Style'), data.style);
       document.querySelectorAll('.sty-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.sty === data.style));
+    }
+    // Season laden
+    if (data.season) {
+      currentSeason = data.season;
+      localStorage.setItem('lwSeason', data.season);
+      const sel = document.getElementById('seasonSelect');
+      if (sel) sel.value = data.season;
+      changeSeason(data.season);
     }
     setSyncBadge('ok');
     return true;
@@ -835,13 +920,16 @@ function showTab(name, btn){
   if (name === 'editor')  renderEditor();
 }
 
-document.querySelectorAll('.sty-btn').forEach(b => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('.sty-btn').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    currentStyle = b.dataset.sty;
-    autoSave();
-  });
+// FIX: Event-Delegation statt direkte Listener auf Buttons
+// querySelectorAll läuft hier im Script-Kontext bevor DOM fertig ist → 0 Treffer
+// Event-Delegation auf document funktioniert immer zuverlässig
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.sty-btn');
+  if (!btn) return;
+  document.querySelectorAll('.sty-btn').forEach(x => x.classList.remove('active'));
+  btn.classList.add('active');
+  currentStyle = btn.dataset.sty;
+  autoSave();
 });
 
 // ════ IST-STAND ════
@@ -1059,6 +1147,14 @@ async function loadState(cloudId){
     currentStyle = data.style || 'hq';
     document.querySelectorAll('.sty-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.sty === currentStyle));
+    // Season setzen falls im Stand gespeichert
+    if (data.season) {
+      currentSeason = data.season;
+      localStorage.setItem('lwSeason', data.season);
+      const sel = document.getElementById('seasonSelect');
+      if (sel) sel.value = data.season;
+      changeSeason(data.season);
+    }
     // Rohstoffe setzen
     if (data.resources) {
       RES_KEYS.forEach(k => {
@@ -1129,12 +1225,14 @@ async function cloudSaveState(name, res, cur) {
     if (existing) {
       await _sb.from('game_states').update({
         style: currentStyle, resources: res, cur_levels: cur,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        season: currentSeason
       }).eq('id', existing.id);
     } else {
       await _sb.from('game_states').insert({
         user_id: userId, name, style: currentStyle,
-        resources: res, cur_levels: cur
+        resources: res, cur_levels: cur,
+        season: currentSeason
       });
     }
     setSyncBadge('ok');
@@ -1356,7 +1454,7 @@ function escAttr(s){ return String(s).replace(/['"&<>]/g, c=>({'&':'&amp;','<':'
   document.getElementById('themeBtn').textContent = darkMode ? '🌙' : '☀️';
 
   // UI-Grundstruktur schon mal aufbauen
-  renderIstTable();
+  initSeason(); // Lädt Season aus localStorage und baut UI auf
 
   // FIX: Auf Session warten – Supabase stellt Session asynchron wieder her
   // getSession() allein reicht nicht wenn Token gerade refreshed wird
