@@ -732,7 +732,9 @@ async function cloudLoadAutoSave() {
   try {
     const { data, error } = await _sb.from('autosave')
       .select('*').eq('user_id', _session.user.id).maybeSingle();
-    if (error || !data) { setSyncBadge('err'); return false; }
+    // Kein Eintrag = erster Login, kein Fehler
+    if (!data) { setSyncBadge('ok'); return false; }
+    if (error) { setSyncBadge('err'); return false; }
     // Ressourcen laden
     if (data.resources) {
       RES_KEYS.forEach(k => {
@@ -757,7 +759,7 @@ async function cloudLoadAutoSave() {
         b.classList.toggle('active', b.dataset.sty === data.style));
     }
     setSyncBadge('ok');
-    return true; // Cloud-Stand erfolgreich geladen
+    return true;
   } catch (e) {
     console.warn('[app] cloudLoadAutoSave error:', e.message);
     setSyncBadge('err');
@@ -1160,17 +1162,6 @@ async function cloudLoadStates() {
   } catch { return []; }
 }
 
-function loadState(idx){
-  const s=getStates()[idx]; if(!s) return;
-  currentStyle=s.style;
-  document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===s.style));
-  RES_KEYS.forEach(k=>{ const el=document.getElementById('r_'+k); if(el&&s.res) el.value=s.res[k]||0; });
-  if(s.cur){ setCurLevels(s.cur); BUILDINGS.forEach(b=>{ const el=document.getElementById('ist_'+b.id); if(el) el.value=s.cur[b.id]||0; }); }
-  closeModal();
-}
-
-
-
 
 // ════ CSV EXPORT ════
 function exportCSV(){
@@ -1215,43 +1206,50 @@ async function loadProfile(cloudId){
 }
 
 // ════ JSON EXPORT / IMPORT ════
-function exportJSON(){
-  const data={
-    version:'4.1',
-    exported:new Date().toISOString(),
-    profiles:getStates(),
-    autoSave:{res:getResCache(),cur:getCurLevels(),style:currentStyle},
-    customDB:localStorage.getItem('lwDB_v41')||null
+async function exportJSON(){
+  // Cloud-Stände laden für vollständigen Export
+  const cloudStates = await cloudLoadStates();
+  const data = {
+    version: '4.2',
+    exported: new Date().toISOString(),
+    profiles: cloudStates,
+    autoSave: { res: getResCache(), cur: getCurLevels(), style: currentStyle },
+    customDB: localStorage.getItem('lwDB_v41') || null
   };
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`LastWar_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `LastWar_Backup_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
-  // FIX: ObjectURL nach dem Click freigeben
-  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-function importJSON(event){
-  const file=event.target.files[0]; if(!file) return;
-  // FIX: Dateigröße prüfen (max 5 MB)
-  if(file.size > 5 * 1024 * 1024){ alert('Datei zu groß (max. 5 MB).'); event.target.value=''; return; }
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const data=JSON.parse(e.target.result);
-      if(data.profiles) setStates(data.profiles);
-      if(data.autoSave){
-        if(data.autoSave.res) setResCache(data.autoSave.res);
-        if(data.autoSave.cur) setCurLevels(data.autoSave.cur);
-        if(data.autoSave.style) localStorage.setItem(getUserKey('Style'), data.autoSave.style);
+async function importJSON(event){
+  const file = event.target.files[0]; if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('Datei zu groß (max. 5 MB).'); event.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      // AutoSave in Cloud schreiben
+      if (data.autoSave && _session) {
+        if (data.autoSave.res) setResCache(data.autoSave.res);
+        if (data.autoSave.cur) setCurLevels(data.autoSave.cur);
+        await cloudAutoSave();
       }
-      if(data.customDB) localStorage.setItem('lwDB_v41', data.customDB);
+      // Spielstände in Cloud importieren
+      if (data.profiles && Array.isArray(data.profiles) && _session) {
+        for (const s of data.profiles) {
+          if (s.name) await cloudSaveState(s.name, s.res || s.resources || {}, s.cur || s.cur_levels || {});
+        }
+      }
+      if (data.customDB) localStorage.setItem('lwDB_v41', data.customDB);
+      alert('✅ Import erfolgreich! Seite wird neu geladen.');
       location.reload();
-    } catch(err){ alert('Fehler beim Importieren: ' + err.message); }
+    } catch(err) { alert('Fehler beim Importieren: ' + err.message); }
   };
   reader.readAsText(file);
-  event.target.value='';
+  event.target.value = '';
 }
 
 // ════ BENUTZERVERWALTUNG (lokal) ════
