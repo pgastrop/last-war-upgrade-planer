@@ -86,8 +86,14 @@ async function logout() {
   } catch (e) {
     console.warn('[auth] Logout-Fehler (ignoriert):', e.message);
   } finally {
-    // FIX: localStorage leeren damit keine veralteten Daten übrig bleiben
-    localStorage.clear();
+    // FIX: Nur App-Keys löschen, NICHT localStorage.clear()
+    // localStorage.clear() löscht Supabase Session-Tokens → Re-Login schlägt fehl
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('lw')) keysToRemove.push(key);
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
     window.location.href = 'index.html';
   }
 }

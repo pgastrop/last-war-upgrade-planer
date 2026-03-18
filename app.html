@@ -767,7 +767,16 @@ async function cloudLoadAutoSave() {
 
 async function doLogout() {
   try { await _sb.auth.signOut(); } catch {}
-  localStorage.clear();
+  // FIX: Nur App-spezifische Keys löschen, NICHT localStorage.clear()
+  // localStorage.clear() löscht auch Supabase Session-Tokens → Login schlägt fehl
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.startsWith('lw') || key.startsWith('sb-'))) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
   location.replace('index.html');
 }
 
@@ -1305,11 +1314,26 @@ function escAttr(s){ return String(s).replace(/['"&<>]/g, c=>({'&':'&amp;','<':'
   document.documentElement.dataset.theme = theme;
   document.getElementById('themeBtn').textContent = darkMode ? '🌙' : '☀️';
 
-  // FIX: Auth-Prüfung – nicht eingeloggte Nutzer zurück zum Login
-  try {
-    const { data } = await _sb.auth.getSession();
-    _session = data?.session ?? null;
-  } catch { _session = null; }
+  // UI-Grundstruktur schon mal aufbauen
+  renderIstTable();
+
+  // FIX: Auf Session warten – Supabase stellt Session asynchron wieder her
+  // getSession() allein reicht nicht wenn Token gerade refreshed wird
+  _session = await new Promise(resolve => {
+    // Zuerst bestehende Session holen
+    _sb.auth.getSession().then(({ data }) => {
+      if (data?.session) { resolve(data.session); return; }
+      // Kein sofortiger Stand → auf Auth-Event warten (max 3 Sekunden)
+      const timeout = setTimeout(() => resolve(null), 3000);
+      const { data: { subscription } } = _sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          clearTimeout(timeout);
+          subscription.unsubscribe();
+          resolve(session);
+        }
+      });
+    }).catch(() => resolve(null));
+  });
 
   if (!_session) {
     location.replace('index.html');
@@ -1320,25 +1344,21 @@ function escAttr(s){ return String(s).replace(/['"&<>]/g, c=>({'&':'&amp;','<':'
   try {
     const { data } = await _sb.from('profiles').select('*').eq('id', _session.user.id).maybeSingle();
     _profile = data;
-    // FIX: Admin-Button nur für Admins anzeigen
     if (_profile?.role === 'admin') {
       const btn = document.getElementById('adminBtn');
       if (btn) btn.style.display = '';
     }
   } catch {}
 
-  // UI initialisieren
-  renderIstTable();
+  // UI mit User-Daten befüllen
   renderUserBadge();
   updateProfileDropdown();
 
-  // Cloud ist die einzige Quelle der Wahrheit nach Login.
-  // cloudLoadAutoSave() befüllt UI + localStorage direkt.
-  // Lokaler Fallback nur wenn Cloud keinen Stand liefert (erster Login / kein AutoSave).
+  // Cloud-Daten laden – ist die einzige Quelle der Wahrheit
   const cloudLoaded = await cloudLoadAutoSave();
 
   if (!cloudLoaded) {
-    // Kein Cloud-Stand → lokalen localStorage verwenden (Offline-Fallback)
+    // Kein Cloud-Stand → lokalen localStorage als Fallback
     const cur = getCurLevels();
     BUILDINGS.forEach(b => { const el = document.getElementById('ist_' + b.id); if(el && cur[b.id] !== undefined) el.value = cur[b.id]; });
     const res = getResCache();
@@ -1347,6 +1367,16 @@ function escAttr(s){ return String(s).replace(/['"&<>]/g, c=>({'&':'&amp;','<':'
     currentStyle = sty;
     document.querySelectorAll('.sty-btn').forEach(b => b.classList.toggle('active', b.dataset.sty === sty));
   }
+
+  // FIX: Auf Token-Refresh reagieren (Session läuft nach ~1h ab)
+  _sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      location.replace('index.html');
+    } else if (event === 'TOKEN_REFRESHED' && session) {
+      _session = session;
+      setSyncBadge('ok');
+    }
+  });
 })();
 </script>
 </body>
