@@ -728,11 +728,11 @@ async function cloudAutoSave() {
 }
 
 async function cloudLoadAutoSave() {
-  if (!_session) return;
+  if (!_session) return false;
   try {
     const { data, error } = await _sb.from('autosave')
       .select('*').eq('user_id', _session.user.id).maybeSingle();
-    if (error || !data) return;
+    if (error || !data) { setSyncBadge('err'); return false; }
     // Ressourcen laden
     if (data.resources) {
       RES_KEYS.forEach(k => {
@@ -752,13 +752,16 @@ async function cloudLoadAutoSave() {
     // Stil laden
     if (data.style) {
       currentStyle = data.style;
+      localStorage.setItem(getUserKey('Style'), data.style);
       document.querySelectorAll('.sty-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.sty === data.style));
     }
     setSyncBadge('ok');
+    return true; // Cloud-Stand erfolgreich geladen
   } catch (e) {
     console.warn('[app] cloudLoadAutoSave error:', e.message);
     setSyncBadge('err');
+    return false;
   }
 }
 
@@ -1015,14 +1018,26 @@ function saveDB(){ setDB(BUILDINGS); const btn=document.querySelector('.btn-save
 function resetDB(){ if(!confirm('Alle Änderungen zurücksetzen?')) return; BUILDINGS=JSON.parse(JSON.stringify(DEFAULT_DB)); localStorage.removeItem('lwDB_v41'); renderEditor(); renderIstTable(); }
 
 // ════ SPIELSTÄNDE ════
-function openModal(){ renderSaveList(); document.getElementById('modalOverlay').classList.add('show'); }
+async function openModal(){
+  document.getElementById('modalOverlay').classList.add('show');
+  // Cloud-Stände laden und mit lokalen mergen
+  const cloudStates = await cloudLoadStates();
+  if (cloudStates.length > 0) {
+    const local = getStates();
+    // Cloud-Stände die lokal fehlen ergänzen
+    cloudStates.forEach(cs => {
+      if (!local.find(ls => ls.name === cs.name)) local.push(cs);
+    });
+    setStates(local);
+  }
+  renderSaveList();
+}
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
 
 function saveState(){
   const name = document.getElementById('saveName').value.trim() || 'Stand ' + new Date().toLocaleString('de-DE');
   const res=getRes(); const cur=getCurLevels();
   const states=getStates();
-  // FIX: Limit auf 30 Stände
   const existIdx=states.findIndex(s=>s.name===name);
   const entry={name,date:new Date().toISOString(),style:currentStyle,res,cur};
   if(existIdx>=0){ if(!confirm(`Stand "${name}" überschreiben?`)) return; states[existIdx]=entry; }
@@ -1030,6 +1045,51 @@ function saveState(){
   setStates(states);
   document.getElementById('saveName').value='';
   renderSaveList();
+  // FIX: Auch in Supabase game_states speichern
+  cloudSaveState(name, res, cur);
+}
+
+async function cloudSaveState(name, res, cur) {
+  if (!_session) return;
+  try {
+    const userId = _session.user.id;
+    // Prüfen ob Name schon existiert → update
+    const { data: existing } = await _sb.from('game_states')
+      .select('id').eq('user_id', userId).eq('name', name).maybeSingle();
+    if (existing) {
+      await _sb.from('game_states').update({
+        style: currentStyle, resources: res, cur_levels: cur,
+        updated_at: new Date().toISOString()
+      }).eq('id', existing.id);
+    } else {
+      await _sb.from('game_states').insert({
+        user_id: userId, name, style: currentStyle,
+        resources: res, cur_levels: cur
+      });
+    }
+    setSyncBadge('ok');
+  } catch (e) {
+    console.warn('[app] cloudSaveState error:', e.message);
+    setSyncBadge('err');
+  }
+}
+
+async function cloudLoadStates() {
+  if (!_session) return [];
+  try {
+    const { data, error } = await _sb.from('game_states')
+      .select('*').eq('user_id', _session.user.id)
+      .order('updated_at', { ascending: false });
+    if (error || !data) return [];
+    return data.map(s => ({
+      name: s.name,
+      date: s.updated_at,
+      style: s.style,
+      res: s.resources,
+      cur: s.cur_levels,
+      _cloudId: s.id
+    }));
+  } catch { return []; }
 }
 
 function loadState(idx){
@@ -1272,17 +1332,21 @@ function escAttr(s){ return String(s).replace(/['"&<>]/g, c=>({'&':'&amp;','<':'
   renderUserBadge();
   updateProfileDropdown();
 
-  // FIX: Cloud-Daten laden (überschreibt lokal wenn vorhanden)
-  await cloudLoadAutoSave();
+  // Cloud ist die einzige Quelle der Wahrheit nach Login.
+  // cloudLoadAutoSave() befüllt UI + localStorage direkt.
+  // Lokaler Fallback nur wenn Cloud keinen Stand liefert (erster Login / kein AutoSave).
+  const cloudLoaded = await cloudLoadAutoSave();
 
-  // Lokalen Stand als Fallback
-  const cur = getCurLevels();
-  BUILDINGS.forEach(b => { const el = document.getElementById('ist_' + b.id); if(el && cur[b.id] !== undefined) el.value = cur[b.id]; });
-  const res = getResCache();
-  RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if(el && res[k] !== undefined) el.value = res[k]; });
-  const sty = localStorage.getItem(getUserKey('Style')) || 'hq';
-  currentStyle = sty;
-  document.querySelectorAll('.sty-btn').forEach(b => b.classList.toggle('active', b.dataset.sty === sty));
+  if (!cloudLoaded) {
+    // Kein Cloud-Stand → lokalen localStorage verwenden (Offline-Fallback)
+    const cur = getCurLevels();
+    BUILDINGS.forEach(b => { const el = document.getElementById('ist_' + b.id); if(el && cur[b.id] !== undefined) el.value = cur[b.id]; });
+    const res = getResCache();
+    RES_KEYS.forEach(k => { const el = document.getElementById('r_' + k); if(el && res[k] !== undefined) el.value = res[k]; });
+    const sty = localStorage.getItem(getUserKey('Style')) || 'hq';
+    currentStyle = sty;
+    document.querySelectorAll('.sty-btn').forEach(b => b.classList.toggle('active', b.dataset.sty === sty));
+  }
 })();
 </script>
 </body>
