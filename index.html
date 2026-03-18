@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<!-- FIX: Content-Security-Policy gegen XSS -->
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self' https://cdn.jsdelivr.net https://pocwtsbryvxwzdoitxtb.supabase.co;
+           script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+           style-src 'self' 'unsafe-inline';">
 <title>Last War – Login</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -62,6 +67,14 @@ input:focus {border-color:var(--accent)}
   background:var(--card); border:1px solid var(--border);
   border-radius:8px; padding:.3rem .6rem; cursor:pointer; font-size:.9rem;
 }
+/* FIX: Passwort-Stärke-Indikator */
+.pw-strength {
+  height:3px; border-radius:99px; margin-top:.3rem; transition:all .3s;
+  background:transparent;
+}
+.pw-strength.weak   {background:var(--red);   width:33%}
+.pw-strength.medium {background:var(--accent); width:66%}
+.pw-strength.strong {background:var(--green);  width:100%}
 </style>
 </head>
 <body>
@@ -74,8 +87,10 @@ input:focus {border-color:var(--accent)}
 
   <div class="tabs" role="tablist">
     <button class="tab active" id="tabLogin" role="tab"
+      aria-controls="formLogin" aria-selected="true"
       onclick="showTab('login')">🔑 Login</button>
     <button class="tab" id="tabReg" role="tab"
+      aria-controls="formReg" aria-selected="false"
       onclick="showTab('reg')">📝 Registrieren</button>
   </div>
 
@@ -83,12 +98,13 @@ input:focus {border-color:var(--accent)}
   <div id="formLogin" role="tabpanel">
     <div class="field">
       <label for="lEmail">E-Mail</label>
-      <input type="email" id="lEmail" placeholder="deine@email.de" autocomplete="email"/>
+      <input type="email" id="lEmail" placeholder="deine@email.de"
+        autocomplete="email" maxlength="254"/>
     </div>
     <div class="field">
       <label for="lPass">Passwort</label>
       <input type="password" id="lPass" placeholder="••••••••"
-        autocomplete="current-password"
+        autocomplete="current-password" maxlength="128"
         onkeydown="if(event.key==='Enter') doLogin()"/>
     </div>
     <button class="btn" id="btnLogin" onclick="doLogin()">🔑 Anmelden</button>
@@ -98,21 +114,27 @@ input:focus {border-color:var(--accent)}
   <div id="formReg" role="tabpanel" hidden>
     <div class="field">
       <label for="rName">Benutzername</label>
-      <input type="text" id="rName" placeholder="Dein Spielname" autocomplete="username"/>
+      <!-- FIX: maxlength gesetzt; autocomplete korrekt -->
+      <input type="text" id="rName" placeholder="Dein Spielname"
+        autocomplete="username" maxlength="50"/>
     </div>
     <div class="field">
       <label for="rEmail">E-Mail</label>
-      <input type="email" id="rEmail" placeholder="deine@email.de" autocomplete="email"/>
+      <input type="email" id="rEmail" placeholder="deine@email.de"
+        autocomplete="email" maxlength="254"/>
     </div>
     <div class="field">
       <label for="rPass">Passwort</label>
-      <input type="password" id="rPass" placeholder="mind. 6 Zeichen"
-        autocomplete="new-password"/>
+      <input type="password" id="rPass" placeholder="mind. 8 Zeichen"
+        autocomplete="new-password" maxlength="128"
+        oninput="checkPwStrength(this.value)"/>
+      <!-- FIX: Passwort-Stärke-Anzeige -->
+      <div class="pw-strength" id="pwStrength"></div>
     </div>
     <div class="field">
       <label for="rPass2">Passwort wiederholen</label>
       <input type="password" id="rPass2" placeholder="••••••••"
-        autocomplete="new-password"
+        autocomplete="new-password" maxlength="128"
         onkeydown="if(event.key==='Enter') doRegister()"/>
     </div>
     <button class="btn" id="btnReg" onclick="doRegister()">📝 Konto erstellen</button>
@@ -131,8 +153,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 // ── Auth API ──────────────────────────────────────────────────
 const Auth = {
   async getSession() {
-    const { data, error } = await sb.auth.getSession();
-    return error ? null : (data?.session ?? null);
+    try {
+      const { data, error } = await sb.auth.getSession();
+      return error ? null : (data?.session ?? null);
+    } catch { return null; }
   },
   async login(email, password) {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
@@ -152,6 +176,7 @@ const Auth = {
 // ── UI Helpers ────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
+// FIX: textContent statt innerHTML – kein XSS-Risiko
 function showMsg(text, ok = false) {
   const el = $('msg');
   el.textContent = text;
@@ -169,13 +194,39 @@ function showTab(tab) {
   $('formReg').hidden   = tab !== 'reg';
   $('tabLogin').classList.toggle('active', tab === 'login');
   $('tabReg').classList.toggle('active',   tab === 'reg');
+  // FIX: aria-selected korrekt setzen
+  $('tabLogin').setAttribute('aria-selected', tab === 'login');
+  $('tabReg').setAttribute('aria-selected',   tab === 'reg');
   showMsg('');
 }
 
 function toggleTheme() {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
   document.documentElement.dataset.theme = next;
+  document.querySelector('.theme-btn').textContent = next === 'dark' ? '🌙' : '☀️';
   localStorage.setItem('lwTheme', next);
+}
+
+// FIX: Passwort-Stärke berechnen
+function checkPwStrength(pw) {
+  const el = $('pwStrength');
+  if (!pw) { el.className = 'pw-strength'; return; }
+  let score = 0;
+  if (pw.length >= 8)  score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) score++;
+  el.className = 'pw-strength ' + ['weak','medium','strong'][Math.min(score, 2)];
+}
+
+// FIX: E-Mail-Format-Validierung
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// FIX: Einfaches HTML-Escaping um XSS in Fehlermeldungen zu verhindern
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // ── Actions ───────────────────────────────────────────────────
@@ -183,13 +234,16 @@ async function doLogin() {
   const email = $('lEmail').value.trim();
   const pass  = $('lPass').value;
   if (!email || !pass) { showMsg('Bitte E-Mail und Passwort eingeben.'); return; }
+  // FIX: E-Mail-Format prüfen
+  if (!isValidEmail(email)) { showMsg('Bitte eine gültige E-Mail-Adresse eingeben.'); return; }
   setLoading('btnLogin', true, '🔑 Anmelden');
   try {
     await Auth.login(email, pass);
     showMsg('✅ Angemeldet! Weiterleitung…', true);
     setTimeout(() => window.location.replace('app.html'), 600);
   } catch (e) {
-    showMsg('❌ ' + e.message);
+    // FIX: Fehlermeldung escaped (kein innerHTML-Risiko da textContent verwendet)
+    showMsg('❌ ' + escapeHtml(e.message));
     setLoading('btnLogin', false, '🔑 Anmelden');
   }
 }
@@ -200,15 +254,21 @@ async function doRegister() {
   const pass  = $('rPass').value;
   const pass2 = $('rPass2').value;
   if (!name || !email || !pass)  { showMsg('Alle Felder ausfüllen.'); return; }
+  if (!isValidEmail(email))      { showMsg('Bitte eine gültige E-Mail-Adresse eingeben.'); return; }
   if (pass !== pass2)            { showMsg('Passwörter stimmen nicht überein.'); return; }
-  if (pass.length < 6)           { showMsg('Passwort mind. 6 Zeichen.'); return; }
+  // FIX: Mindestlänge auf 8 Zeichen erhöht (sicherer)
+  if (pass.length < 8)           { showMsg('Passwort mind. 8 Zeichen.'); return; }
+  // FIX: Benutzername-Validierung (keine Sonderzeichen die XSS ermöglichen)
+  if (!/^[\w\s\-äöüÄÖÜß]{2,50}$/.test(name)) {
+    showMsg('Benutzername: 2–50 Zeichen, keine Sonderzeichen.'); return;
+  }
   setLoading('btnReg', true, '📝 Konto erstellen');
   try {
     await Auth.register(email, pass, name);
     showMsg('✅ Konto erstellt! Bitte E-Mail bestätigen, dann einloggen.', true);
     setTimeout(() => showTab('login'), 2500);
   } catch (e) {
-    showMsg('❌ ' + e.message);
+    showMsg('❌ ' + escapeHtml(e.message));
   } finally {
     setLoading('btnReg', false, '📝 Konto erstellen');
   }
@@ -219,6 +279,7 @@ async function doRegister() {
   // Theme
   const theme = localStorage.getItem('lwTheme') ?? 'dark';
   document.documentElement.dataset.theme = theme;
+  document.querySelector('.theme-btn').textContent = theme === 'dark' ? '🌙' : '☀️';
   // Bereits eingeloggt? → direkt weiter
   const session = await Auth.getSession();
   if (session) window.location.replace('app.html');
