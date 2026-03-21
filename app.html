@@ -999,10 +999,6 @@ function changeSeason(season) {
   const quartzBox = document.getElementById('r_quartz')?.closest('.res-box');
   if (quartzBox) quartzBox.style.display = cfg.hasQuartz ? '' : 'none';
 
-  // F4-FIX: Stein-Ressource ein/ausblenden (nur S4 braucht Stein für Quarz-Workshop)
-  const stoneBox = document.getElementById('r_stone')?.closest('.res-box');
-  if (stoneBox) stoneBox.style.display = cfg.hasS4 ? '' : 'none';
-
   // S4-Filter-Button in Ist-Stand ein/ausblenden
   document.querySelectorAll('[data-if="s4"]').forEach(b =>
     b.style.display = cfg.hasS4 ? '' : 'none');
@@ -1046,9 +1042,22 @@ function setSyncBadge(state) {
 
 async function cloudAutoSave() {
   if (!_session) return;
-  // F1-FIX: Routing über _adminView Flag statt doppelter Funktionsdefinition
-  const targetUserId = _adminView ? _adminView.userId : _session.user.id;
-  return cloudAutoSaveForUser(targetUserId);
+  try {
+    const res = getRes();
+    const cur = getCurLevels();
+    await _sb.from('autosave').upsert({
+      user_id:    _session.user.id,
+      style:      currentStyle,
+      resources:  res,
+      cur_levels: cur,
+      updated_at: new Date().toISOString(),
+      season:     currentSeason
+    }, { onConflict: 'user_id' });
+    setSyncBadge('ok');
+  } catch (e) {
+    console.warn('[app] cloudAutoSave error:', e.message);
+    setSyncBadge('err');
+  }
 }
 
 async function cloudLoadAutoSave() {
@@ -1115,18 +1124,8 @@ async function doLogout() {
 }
 
 // ════ LOCALSTORAGE HELPERS ════
-// F3-FIX: getDB bewahrt _estimated Flags aus DEFAULT_DB
-// Beim Season-Wechsel werden Flags nicht mehr verloren
-function getDB(){
-  const stored = localStorage.getItem('lwDB_v41');
-  if (stored) return JSON.parse(stored);
-  // Deep-clone DEFAULT_DB inkl. _estimated Flags
-  return DEFAULT_DB.map(b => ({
-    ...b,
-    levels: b.levels.map(lv => ({...lv}))
-  }));
-}
-function setDB(db){ localStorage.setItem('lwDB_v41',JSON.stringify(db)); }
+function getDB(){const r=localStorage.getItem('lwDB_v41');return r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_DB));}
+function setDB(db){localStorage.setItem('lwDB_v41',JSON.stringify(db));}
 let BUILDINGS = getDB();
 
 function getUserKey(suffix){
@@ -1139,9 +1138,6 @@ function getResCache(){return JSON.parse(localStorage.getItem(getUserKey('ResCac
 function setResCache(o){localStorage.setItem(getUserKey('ResCache'),JSON.stringify(o));}
 function getStates(){return JSON.parse(localStorage.getItem(getUserKey('States_v41'))||'[]');}
 function setStates(s){localStorage.setItem(getUserKey('States_v41'),JSON.stringify(s));}
-
-// F2-FIX: getStates/setStates entfernt – Spielstände laufen nur noch über Supabase
-// (localStorage-basierte Stände wurden durch Cloud-System ersetzt)
 
 // ════ AUTOSAVE ════
 function autoSave(){
@@ -1157,8 +1153,9 @@ function autoSave(){
     const ind = document.getElementById('savedIndicator');
     ind.classList.add('show');
     setTimeout(() => ind.classList.remove('show'), 2000);
+    // FIX: Cloud-Sync nach lokaler Speicherung
     cloudAutoSave();
-  }, 600);
+  }, 600); // FIX: 600ms statt 400ms – weniger Supabase-Requests
 }
 
 // ════ THEME ════
@@ -1234,9 +1231,6 @@ function calculate(){
     if (!nextLv) continue;
     const hqCur = cur['hq'] || 0;
     if (hqCur < nextLv.hq_req) continue;
-    // F8-FIX: Interpolierte Einträge mit food=0 UND iron=0 überspringen
-    // (bedeutet: Kosten unbekannt → nicht als finanzierbar anzeigen)
-    if (nextLv._estimated && nextLv.food === 0 && nextLv.iron === 0) continue;
     const ok = {}; RES_KEYS.forEach(k => ok[k] = res[k] >= nextLv[k]);
     const feasible = Object.values(ok).every(Boolean);
     const score = Math.round(nextLv.sb * (mult[b.type] || 1));
@@ -1316,13 +1310,11 @@ function renderTracker(){
   BUILDINGS.forEach(b => { const m=b.levels[b.levels.length-1]?.l||0; tMax+=m; tCur+=Math.min(cur[b.id]||0,m); });
   const pct = tMax>0 ? Math.round(tCur/tMax*100) : 0;
   const maxed = BUILDINGS.filter(b => { const m=b.levels[b.levels.length-1]?.l||0; return (cur[b.id]||0)>=m&&m>0; }).length;
-  // F5-FIX: Season-Label dynamisch, nicht hardcoded 'S4'
-  const seasonLabel = SEASON_CONFIG[currentSeason]?.label || currentSeason.toUpperCase();
   document.getElementById('progSummary').innerHTML = `
     <div class="prog-sum-box"><div class="num">${pct}%</div><div class="lbl">Fortschritt</div></div>
     <div class="prog-sum-box"><div class="num">${BUILDINGS.length}</div><div class="lbl">Gebäude</div></div>
     <div class="prog-sum-box"><div class="num">${maxed}</div><div class="lbl">Maxed ✅</div></div>
-    <div class="prog-sum-box"><div class="num">${seasonLabel}</div><div class="lbl">Season</div></div>`;
+    <div class="prog-sum-box"><div class="num">S4</div><div class="lbl">Season</div></div>`;
   document.getElementById('progGrid').innerHTML = filtered.map(b => {
     const maxLv = b.levels[b.levels.length-1]?.l || 0;
     const curLv = Math.min(cur[b.id]||0, maxLv);
@@ -1354,12 +1346,7 @@ function changeLvT(id, dir){
   renderTracker();
   cloudAutoSave(); // FIX: Cloud-Sync auch nach Tracker-Änderungen
 }
-function resetLvT(id){
-  const cur=getCurLevels(); delete cur[id]; setCurLevels(cur);
-  const el=document.getElementById('ist_'+id); if(el) el.value=0;
-  renderTracker();
-  cloudAutoSave(); // F9-FIX: Cloud-Sync auch beim Reset
-}
+function resetLvT(id){ const cur=getCurLevels(); delete cur[id]; setCurLevels(cur); const el=document.getElementById('ist_'+id); if(el) el.value=0; renderTracker(); }
 
 // ════ EDITOR ════
 function renderEditor(){
@@ -1483,7 +1470,7 @@ async function deleteState(cloudId){
 }
 
 async function renderSaveList(){
-  await updateProfileDropdown().catch(()=>{});
+  updateProfileDropdown();
   const el = document.getElementById('saveList');
   const states = await cloudLoadStates();
   if (!states.length) {
@@ -1568,7 +1555,7 @@ function quickSave(){
   const res = getRes();
   const cur = getCurLevels();
   cloudSaveState(name, res, cur).then(() => {
-    await updateProfileDropdown().catch(()=>{});
+    updateProfileDropdown();
     const ind = document.getElementById('savedIndicator');
     ind.textContent = '✅ ' + name + ' gespeichert';
     ind.classList.add('show');
@@ -1593,6 +1580,7 @@ async function loadProfile(cloudId){
 
 // ════ JSON EXPORT / IMPORT ════
 async function exportJSON(){
+  // Cloud-Stände laden für vollständigen Export
   const cloudStates = await cloudLoadStates();
   const data = {
     version: '4.2',
@@ -1601,12 +1589,12 @@ async function exportJSON(){
     autoSave: { res: getResCache(), cur: getCurLevels(), style: currentStyle },
     customDB: localStorage.getItem('lwDB_v41') || null
   };
-  const json = JSON.stringify(data, null, 2);
-  // F12-FIX: data: URL statt blob: URL – CSP-konform
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
-  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
+  a.href = URL.createObjectURL(blob);
   a.download = `LastWar_Backup_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 async function importJSON(event){
@@ -1620,18 +1608,12 @@ async function importJSON(event){
       if (data.autoSave && _session) {
         if (data.autoSave.res) setResCache(data.autoSave.res);
         if (data.autoSave.cur) setCurLevels(data.autoSave.cur);
-        // F13-FIX: Style aus Import-Daten setzen VOR cloudAutoSave
-        if (data.autoSave.style) currentStyle = data.autoSave.style;
         await cloudAutoSave();
       }
       // Spielstände in Cloud importieren
       if (data.profiles && Array.isArray(data.profiles) && _session) {
         for (const s of data.profiles) {
-          // F13-FIX: Style pro Stand temporär setzen
-          const savedStyle = currentStyle;
-          if (s.style) currentStyle = s.style;
-          await cloudSaveState(s.name, s.res || s.resources || {}, s.cur || s.cur_levels || {});
-          currentStyle = savedStyle;
+          if (s.name) await cloudSaveState(s.name, s.res || s.resources || {}, s.cur || s.cur_levels || {});
         }
       }
       if (data.customDB) localStorage.setItem('lwDB_v41', data.customDB);
@@ -1674,7 +1656,7 @@ function switchUser(id){
   const sty=localStorage.getItem(getUserKey('Style'))||'hq';
   currentStyle=sty;
   document.querySelectorAll('.sty-btn').forEach(b=>b.classList.toggle('active',b.dataset.sty===sty));
-  await updateProfileDropdown().catch(()=>{});
+  updateProfileDropdown();
   lastResults=[]; lastCant=[];
   document.getElementById('resultSection').style.display='none';
   document.getElementById('start-hint').style.display='block';
@@ -1779,24 +1761,30 @@ async function loadUserDataAsAdmin(userId) {
 }
 
 // cloudAutoSave im Admin-View schreibt für den Zielnutzer
-// F1-FIX: Doppelte Funktionsdefinition entfernt – eine saubere Implementierung
-async function cloudAutoSaveForUser(userId) {
-  try {
-    const res = getRes();
-    const cur = getCurLevels();
-    await _sb.from('autosave').upsert({
-      user_id:    userId,
-      style:      currentStyle,
-      resources:  res,
-      cur_levels: cur,
-      updated_at: new Date().toISOString(),
-      season:     currentSeason
-    }, { onConflict: 'user_id' });
-    setSyncBadge('ok');
-  } catch(e) {
-    console.warn('[app] cloudAutoSaveForUser error:', e.message);
-    setSyncBadge('err');
+// (Override der normalen cloudAutoSave-Funktion wenn _adminView aktiv)
+const _origCloudAutoSave = cloudAutoSave;
+async function cloudAutoSave() {
+  if (_adminView) {
+    // Im Admin-View: Schreibe für den Zielnutzer
+    try {
+      const res = getRes();
+      const cur = getCurLevels();
+      await _sb.from('autosave').upsert({
+        user_id:    _adminView.userId,
+        style:      currentStyle,
+        resources:  res,
+        cur_levels: cur,
+        updated_at: new Date().toISOString(),
+        season:     currentSeason
+      }, { onConflict: 'user_id' });
+      setSyncBadge('ok');
+    } catch(e) {
+      console.warn('[admin-view] cloudAutoSave error:', e.message);
+      setSyncBadge('err');
+    }
+    return;
   }
+  return _origCloudAutoSave();
 }
 // FIX: Dedizierte Escape-Funktionen für HTML-Attribut und Text-Kontext
 function escTxt(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1848,7 +1836,7 @@ function escAttr(s){ return String(s).replace(/['"&<>]/g, c=>({'&':'&amp;','<':'
 
   // UI mit User-Daten befüllen
   renderUserBadge();
-  await updateProfileDropdown().catch(()=>{});
+  updateProfileDropdown();
 
   // ── Admin-Impersonation prüfen ──────────────────────────
   const adminViewRaw = sessionStorage.getItem('lwAdminView');
