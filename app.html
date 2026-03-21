@@ -1034,6 +1034,7 @@ function initSeason() {
 // Supabase Session
 let _session = null;
 let _profile = null;
+let _adminView = null; // { userId, username, adminId, adminName } – Admin-Impersonation
 
 // ════ SUPABASE SYNC ════════════════════════════════════════
 function setSyncBadge(state) {
@@ -1734,7 +1735,7 @@ function openUserModal(){ renderUserList(); document.getElementById('userOverlay
 function closeUserModal(){ document.getElementById('userOverlay').classList.remove('show'); }
 
 // ════ ADMIN-IMPERSONATION ════
-let _adminView = null; // { userId, username, adminId, adminName }
+// _adminView wird oben bei den Session-Variablen deklariert
 
 function exitAdminView() {
   sessionStorage.removeItem('lwAdminView');
