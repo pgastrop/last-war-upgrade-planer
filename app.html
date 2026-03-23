@@ -10,6 +10,8 @@
            style-src 'self' 'unsafe-inline';">
 <title>Last War S4 – Upgrade-Planer</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
 <style>
 [data-theme="dark"]{--bg:#0b0f14;--card:#13191f;--card2:#1a2230;--border:#2a3548;--text:#e6edf3;--muted:#7d8fa8;--inp:#0d1520;--hover:#1c2a3a;--modal-bg:rgba(0,0,0,.75)}
 [data-theme="light"]{--bg:#f0f4f8;--card:#ffffff;--card2:#eef2f7;--border:#c8d6e5;--text:#1a2535;--muted:#6b7c93;--inp:#f8fafc;--hover:#e8f0fb;--modal-bg:rgba(0,0,0,.4)}
@@ -410,10 +412,10 @@ tr:hover td{background:var(--hover)}
 
 <script>
 // ════════════════════════════════════════════════════════════
-// SUPABASE INIT
+// Supabase via js/config.js initialisiert
 // ════════════════════════════════════════════════════════════
-const SUPABASE_URL  = 'https://pocwtsbryvxwzdoitxtb.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvY3d0c2JyeXZ4d3pkb2l0eHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjI2MjAsImV4cCI6MjA4OTMzODYyMH0.DNgPGFaQkDFTQf7BhtYsysyAvX5VpSBn4WdVmRa4LaU';
+// FIX: Credentials aus js/config.js
+// FIX: Credentials aus js/config.js
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ════════════════════════════════════════════════════════════

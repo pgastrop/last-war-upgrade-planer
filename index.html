@@ -10,6 +10,7 @@
            style-src 'self' 'unsafe-inline';">
 <title>Last War – Login</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
 <style>
 :root {
   --accent:#f0a500; --green:#2ea043; --red:#cf222e;
@@ -146,8 +147,8 @@ input:focus {border-color:var(--accent)}
 
 <script>
 // ── Konstanten ────────────────────────────────────────────────
-const SUPABASE_URL  = 'https://pocwtsbryvxwzdoitxtb.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvY3d0c2JyeXZ4d3pkb2l0eHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjI2MjAsImV4cCI6MjA4OTMzODYyMH0.DNgPGFaQkDFTQf7BhtYsysyAvX5VpSBn4WdVmRa4LaU';
+// FIX: Credentials aus js/config.js
+// FIX: Credentials aus js/config.js
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ── Auth API ──────────────────────────────────────────────────

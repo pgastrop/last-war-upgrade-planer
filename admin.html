@@ -6,6 +6,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Last War – Admin</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/db.js"></script>
 <style>
 :root {--accent:#f0a500;--green:#2ea043;--red:#cf222e;--blue:#0969da;--purple:#8250df}
 [data-theme="dark"]  {--bg:#0b0f14;--card:#13191f;--card2:#1a2230;--border:#2a3548;--text:#e6edf3;--muted:#7d8fa8;--hover:#1c2a3a}
@@ -120,24 +123,27 @@ tr:hover td  {background:var(--hover)}
 </div>
 
 <script>
+
+// ── XSS-Schutz Escape-Helfer ──────────────────────────────────
+function escTxt(s)  { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escAttr(s) { return String(s ?? '').replace(/['"&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // ── Konstanten ────────────────────────────────────────────────
-const SUPABASE_URL  = 'https://pocwtsbryvxwzdoitxtb.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvY3d0c2JyeXZ4d3pkb2l0eHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjI2MjAsImV4cCI6MjA4OTMzODYyMH0.DNgPGFaQkDFTQf7BhtYsysyAvX5VpSBn4WdVmRa4LaU';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// FIX: Credentials via js/config.js + js/auth.js (_sb)
+// FIX: Credentials via js/config.js + js/auth.js (_sb)
 const RES_ICONS = {food:'🌾', iron:'⚙️', gold:'💰', oil:'🔩', stone:'🪨', quartz:'💎'};
 
 // ── Auth ──────────────────────────────────────────────────────
 const Auth = {
   async getSession() {
-    const { data, error } = await sb.auth.getSession();
+    const { data, error } = await _sb.auth.getSession();
     return error ? null : (data?.session ?? null);
   },
   async getProfile(userId) {
-    const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
+    const { data } = await _sb.from('profiles').select('*').eq('id', userId).single();
     return data ?? null;
   },
   async logout() {
-    await sb.auth.signOut().catch(() => {});
+    await _sb.auth.signOut().catch(() => {});
     localStorage.clear();
     location.replace('index.html');
   }
@@ -147,9 +153,9 @@ const Auth = {
 const DB = {
   async loadAll() {
     const [p, s, g] = await Promise.all([
-      sb.from('profiles').select('*').order('created_at'),
-      sb.from('autosave').select('*'),
-      sb.from('game_states').select('*').order('updated_at', { ascending: false })
+      _sb.from('profiles').select('*').order('created_at'),
+      _sb.from('autosave').select('*'),
+      _sb.from('game_states').select('*').order('updated_at', { ascending: false })
     ]);
     return {
       profiles: p.data ?? [],
@@ -158,7 +164,7 @@ const DB = {
     };
   },
   async setRole(userId, role) {
-    const { error } = await sb.from('profiles').update({ role }).eq('id', userId);
+    const { error } = await _sb.from('profiles').update({ role }).eq('id', userId);
     if (error) throw error;
   }
 };
@@ -173,7 +179,7 @@ const fmt = d => d ? new Date(d).toLocaleString('de-DE') : '–';
 const fmtDate = d => d ? new Date(d).toLocaleDateString('de-DE') : '–';
 
 function setStatus(html, error = false) {
-  $('status').innerHTML = html;
+  $('status').textContent = html;
   $('status').className = error ? 'error-msg' : 'loading';
   $('status').hidden = false;
   $('content').hidden = true;
@@ -201,7 +207,7 @@ function renderUsers() {
     const isMe    = p.id === me?.id;
     const isAdmin = p.role === 'admin';
     return `<tr>
-      <td><strong>${p.username}</strong>${isMe ? ' <small style="color:var(--green)">(Du)</small>' : ''}</td>
+      <td><strong>${escTxt(p.username)}</strong>${isMe ? ' <small style="color:var(--green)">(Du)</small>' : ''}</td>
       <td><span class="tag ${isAdmin ? 'tag-admin' : 'tag-user'}">${isAdmin ? '👑 Admin' : '👤 User'}</span></td>
       <td style="color:var(--muted)">${fmtDate(p.created_at)}</td>
       <td style="font-size:.75rem">${save ? fmt(save.updated_at) : '–'}</td>
@@ -212,7 +218,7 @@ function renderUsers() {
             ? `<button class="btn-sm btn-demote" onclick="setRole('${p.id}','user')">↓ User</button>`
             : `<button class="btn-sm btn-promote" onclick="setRole('${p.id}','admin')">↑ Admin</button>`)
           : ''}
-          ${save ? `<button class="btn-sm btn-view" onclick="showAutoSave('${p.id}','${p.username}')">👁 AutoSave</button>` : ''}
+          ${save ? `<button class="btn-sm btn-view" onclick="showAutoSave('${escAttr(p.id)}','${escAttr(p.username)}')">👁 AutoSave</button>` : ''}
           ${!isMe ? `<button class="btn-sm" style="background:var(--green)" onclick="impersonate('${p.id}','${p.username.replace(/'/g,"\\'")}')">🔍 Als Nutzer öffnen</button>` : ''}
         </div>
       </td>
@@ -240,7 +246,7 @@ function renderStates() {
       .filter(([, v]) => parseFloat(v) > 0)
       .map(([k, v]) => `<span class="chip">${RES_ICONS[k] ?? k} ${v}M</span>`).join('');
     return `<tr>
-      <td><strong>${user?.username ?? '?'}</strong></td>
+      <td><strong>${escTxt(user?.username ?? '?')}</strong></td>
       <td>${s.name}</td>
       <td style="font-size:.75rem">${s.style ?? '–'}</td>
       <td style="white-space:normal">${res || '–'}</td>
